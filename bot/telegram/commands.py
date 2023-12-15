@@ -33,6 +33,7 @@ class TelegramCommands:
           command="menu",
           chat_id=chat_id,
           message_text=card_uri,
+          options={"disable_preview": False},
       )
     else:
       return cls.card_not_found(
@@ -49,7 +50,7 @@ class TelegramCommands:
     card_uri = await ScryfallFetcher.get_card_image(card_name=message_text)
     if card_uri:
       return Utils.generate_outgoing_message(
-          command="text",
+          command="image",
           chat_id=chat_id,
           message_text=card_uri,
       )

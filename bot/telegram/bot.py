@@ -62,6 +62,7 @@ class MagicBot:
       chat_id: str,
       message: str,
       registered: bool,
+      disable_preview: bool = True,
   ):
     """Sends a menu to a user.
 
@@ -92,7 +93,7 @@ class MagicBot:
         text=message,
         parse_mode="HTML",
         reply_markup=reply_markup,
-        disable_web_page_preview=True,
+        disable_web_page_preview=disable_preview,
     )
 
   @classmethod

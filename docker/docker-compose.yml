@@ -6,8 +6,6 @@ services:
     image: mongo
     networks:
       - bot_network
-    ports:
-      - "27017:27017"
     volumes:
       - mongo_data:/data/db
     restart: always
@@ -17,9 +15,6 @@ services:
     image: rabbitmq:3-management
     networks:
       - bot_network
-    ports:
-      - "5672:5672" # RabbitMQ server
-      - "15672:15672" # Management console
     environment:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
@@ -30,11 +25,6 @@ services:
     image: telegram-listener:latest
     networks:
       - bot_network
-    environment:
-      RABBITMQ_HOST: rabbit-mq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: user
-      RABBITMQ_PASSWORD: password
     depends_on:
       - rabbitmq
     restart: always
@@ -42,14 +32,6 @@ services:
   from-user-listener:
     container_name: from-user-listener
     image: from-user-listener:latest
-    environment:
-      RABBITMQ_HOST: rabbit-mq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: user
-      RABBITMQ_PASSWORD: password
-      EXCHANGE_NAME: bot-exchange
-      FROM_USER_QUEUE_NAME: from-user
-      MONGO_CONNECTION: "mongodb://mongodb:27017"
     depends_on:
       - rabbitmq
       - selenium-chrome

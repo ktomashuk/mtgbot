@@ -11,7 +11,7 @@ class Utils:
       command: str,
       chat_id: str,
       message_text: str,
-      options: list[str] | None = None,
+      options: list[str] | dict | None = None,
       status: bool = True,
   ) -> bytes:
     """Generates a message to be sent to a queue.
@@ -20,7 +20,8 @@ class Utils:
       command: a string with a command to send
       chat_id: id of the chat to send response to
       message_text: message that will be sent
-      status: status of the message
+      options: additional options to send
+      status: status check (mostly for checking registration)
     Returns:
       A dict encoded into bytes
     """
