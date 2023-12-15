@@ -113,17 +113,16 @@ class TelegramCommands:
     # Check if the quiz with this message id exists
     quiz = await MongoClient.get_quiz_object(message_id=message_id)
     if quiz:
-      response = f"{username} Sorry, the answer is not '{text}'."
       quiz_card = quiz.get("card_name", "")
       quiz_card_name = quiz_card.lower()
       if len(user_card_name) < 5 and quiz_card_name == user_card_name or \
       len(user_card_name) >= 5 and user_card_name in quiz_card_name:
-        response = f"{username} Correct! The answer is '{quiz_card}'!"
-      return Utils.generate_outgoing_message(
-          command="text",
-          chat_id=chat_id,
-          message_text=response,
-      )
+        card_url = await ScryfallFetcher.get_card_image(card_name=quiz_card)
+        return Utils.generate_outgoing_message(
+            command="image",
+            chat_id=chat_id,
+            message_text=card_url,
+        )
     else:
       return Utils.generate_outgoing_message(
           command="void",
@@ -170,31 +169,30 @@ class TelegramCommands:
     message = message_dict.get("message", "")
     options = message_dict.get("options")
     now = datetime.now()
-    datetime_string = now.strftime("%Y-%m-%d %H:%M:%S")
+    datetime_string = now.strftime("%Y-%m-%d")
     existing = await MongoClient.check_edh_danas()
-    if existing:
-      existing_date = existing.get("timestamp")
-      check_if_older = Utils.check_if_next_day(
-          current_day=datetime_string,
-          previous_day=existing_date,
-      )
-      if check_if_older:
-        print("FOUND DANAS AND IT'S OLDER")
-      else:
-        print("FOUND DANAS AND IT'S NEW")
-      return Utils.generate_outgoing_message(
-          command="text",
-          chat_id=chat_id,
-          message_text="FOUND",
-      )
-    else:
-      print("CREATING NEW POLL")
-      return Utils.generate_outgoing_message(
-          command="poll",
-          chat_id=chat_id,
-          message_text=message,
-          options=options,
-      )
+    # if existing:
+    #   existing_date = existing.get("timestamp")
+    #   check_if_older = Utils.check_if_next_day(
+    #       current_day=datetime_string,
+    #       previous_day=existing_date,
+    #   )
+    #   if check_if_older:
+    #     print("FOUND DANAS AND IT'S OLDER")
+    #   else:
+    #     print("FOUND DANAS AND IT'S NEW")
+    #   return Utils.generate_outgoing_message(
+    #       command="text",
+    #       chat_id=chat_id,
+    #       message_text="FOUND",
+    #   )
+    # else:
+    return Utils.generate_outgoing_message(
+        command="poll",
+        chat_id=chat_id,
+        message_text=message,
+        options=options,
+    )
 
   @classmethod
   async def register_user(

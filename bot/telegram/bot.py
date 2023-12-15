@@ -14,6 +14,7 @@ from telegram.ext import (
     filters,
     MessageHandler,
 )
+from telegram import ReplyKeyboardRemove
 from bot.config import config
 from bot.utils.utils import Utils
 from bot.mongo.mongo_client import MongoClient
@@ -116,6 +117,7 @@ class MagicBot:
     Returns:
       A coroutine
     """
+    print("STARTED SENDING POLL")
     poll_message = await cls.bot.send_poll(
         chat_id=chat_id,
         question=message,
@@ -459,12 +461,13 @@ class MagicBot:
     Returns:
       A coroutine (?)
     """
-    if update.effective_chat.type == "private":
-      await cls.send_message_to_queue(
-          command="any_message",
-          chat_id=update.effective_chat.id,
-          message_text=update.message.text,
-      )
+    if update.effective_chat.type != "private":
+      return
+    await cls.send_message_to_queue(
+        command="any_message",
+        chat_id=update.effective_chat.id,
+        message_text=update.message.text,
+    )
 
   @classmethod
   async def edh_danas_handler(
@@ -849,6 +852,7 @@ class MagicBot:
     app.add_handler(card_search_handler)
     app.add_handler(CommandHandler("c", cls.card_url_hanlder))
     app.add_handler(CommandHandler("cp", cls.card_price_handler))
+    app.add_handler(CommandHandler("fuck", cls.card_price_handler))
     app.add_handler(CommandHandler("ci", cls.card_image_handler))
     app.add_handler(CommandHandler("quiz", cls.card_quiz_handler))
     app.add_handler(CommandHandler("reg", cls.user_registration_handler))
