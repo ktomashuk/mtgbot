@@ -75,9 +75,17 @@ class ToUserListener:
       message = data_dict.get("text")
       status = data_dict.get("status")
       options = data_dict.get("options", {})
+      if not options:
+        options = {}
       match command:
         case "text":
-          await MagicBot.send_message_to_user(chat_id=chat_id, message=message)
+          if isinstance(options, dict):
+            disable_preview = options.get("disable_preview", True)
+          await MagicBot.send_message_to_user(
+              chat_id=chat_id,
+              message=message,
+              disable_preview=disable_preview,
+          )
         case "image":
           await MagicBot.send_image_to_user(chat_id=chat_id, image_url=message)
         case "menu":

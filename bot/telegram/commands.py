@@ -16,7 +16,7 @@ class TelegramCommands:
   ):
     text = f"Card '{card_name}' not found!"
     return Utils.generate_outgoing_message(
-            command="menu",
+            command="text",
             chat_id=chat_id,
             message_text=text,
         )
@@ -30,7 +30,7 @@ class TelegramCommands:
     card_uri = await ScryfallFetcher.get_card_url(card_name=message_text)
     if card_uri:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="text",
           chat_id=chat_id,
           message_text=card_uri,
           options={"disable_preview": False},

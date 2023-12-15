@@ -28,6 +28,8 @@ class MagicBot:
       update: Update,
       context: ContextTypes.DEFAULT_TYPE,
   ):
+    if update.effective_chat.type != "private":
+      return
     user = update.message.from_user
     username = user.username
     await cls.send_message_to_queue(
@@ -41,6 +43,7 @@ class MagicBot:
       cls,
       chat_id: str,
       message: str,
+      disable_preview: bool = True,
   ):
     """Sends a message to a user.
 
@@ -54,6 +57,7 @@ class MagicBot:
         chat_id=chat_id,
         text=message,
         parse_mode="HTML",
+        disable_web_page_preview=disable_preview,
     )
 
   @classmethod
@@ -112,7 +116,6 @@ class MagicBot:
     Returns:
       A coroutine
     """
-    print("SENDING POLL??")
     poll_message = await cls.bot.send_poll(
         chat_id=chat_id,
         question=message,
@@ -145,6 +148,8 @@ class MagicBot:
     Returns:
       A an input
     """
+    if update.effective_chat.type != "private":
+      return
     result_text = (
       "Please enter the list of deckboxes to subsribe to.\n"
       "Each deckbox must be on a separate line.\n"
@@ -170,6 +175,8 @@ class MagicBot:
     Returns:
       A an input
     """
+    if update.effective_chat.type != "private":
+      return
     result_text = (
       "Please enter the list of cards to look for.\n"
       "Each card must be on a separate line.\n"
@@ -195,6 +202,8 @@ class MagicBot:
     Returns:
       A an input
     """
+    if update.effective_chat.type != "private":
+      return
     result_text = (
       "Please enter the list of deckboxes to unsubsribe from.\n"
       "Each deckbox must be on a separate line.\n"
@@ -220,6 +229,8 @@ class MagicBot:
     Returns:
       An input
     """
+    if update.effective_chat.type != "private":
+      return
     result_text = (
       "Please enter your deckbox name.\n"
       "To cancel the command type /cancel.\n"
@@ -404,7 +415,6 @@ class MagicBot:
       A coroutine (?)
     """
     if update.effective_chat.type == "private":
-      print("Received a random message")
       await cls.send_message_to_queue(
           command="any_message",
           chat_id=update.effective_chat.id,
