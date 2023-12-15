@@ -11,6 +11,7 @@ class MongoClient:
   deckbox_tradelist_colletion = db.deckbox_tradelists
   deckbox_wishlist_collection = db.deckbox_wishlists
   edh_danas_collection = db.edh_danas
+  quiz_collection = db.quiz
 
   @classmethod
   async def get_user_data(
@@ -180,6 +181,48 @@ class MongoClient:
       return result.acknowledged
     else:
       return False
+
+  @classmethod
+  async def add_quiz_object(
+      cls,
+      card_name: str,
+      message_id: str,
+  ):
+    """Adds a new object with the user data to the "users" collection.
+
+    Args:
+      object: a dictionary with user data to be added
+    Returns:
+      A bool with status of the operation
+    """
+    object = {
+        "card_name": card_name,
+        "message_id": message_id,
+    }
+    result = await cls.quiz_collection.insert_one(object)
+    if result:
+      return result.acknowledged
+    else:
+      return False
+
+  @classmethod
+  async def get_quiz_object(
+      cls,
+      message_id: str,
+  ) -> str:
+    """Fetches the account name for the chosen deckbox list ID.
+
+    Args:
+      deckbox: id of the deckbox list
+      tradelist: set to True when searching for tradelists
+      wishlist: set to True when searching for wishlists
+    Returns:
+      A string with the username associated with the decklist ID
+    """
+    result = await cls.quiz_collection.find_one(
+        {"message_id": message_id}
+    )
+    return result
 
   @classmethod
   async def add_deckbox(

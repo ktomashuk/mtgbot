@@ -104,6 +104,17 @@ class ToUserListener:
               message=message,
               answers=options,
           )
+        case "quiz":
+          if isinstance(options, dict):
+            card_name = options.get("card_name", "")
+            art = options.get("art", "")
+          await MagicBot.send_quiz_image_to_chat(
+              chat_id=chat_id,
+              card_name=card_name,
+              image_url=art,
+          )
+        case "void":
+          pass
 
   @classmethod
   async def run_listener(cls):

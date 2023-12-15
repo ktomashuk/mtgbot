@@ -1,4 +1,5 @@
 SCRYFALL_GET_CARD_URL = "https://api.scryfall.com/cards/named?fuzzy={name}"
+SCRYFALL_GET_RANDOM_CARD_URL = "https://api.scryfall.com/cards/random"
 DECKBOX_TRADELIST_URL = "https://deckbox.org/sets/{deckbox_id}"
 DECKBOX_TRADELIST_CARDNAME_FILTER_URL = (
   "https://deckbox.org/sets/{deckbox_id}?f=17{card_name}"

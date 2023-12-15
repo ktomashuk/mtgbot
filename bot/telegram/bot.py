@@ -266,6 +266,29 @@ class MagicBot:
     return ConversationHandler.END
 
   @classmethod
+  async def handle_reply(
+      cls,
+      update: Update,
+      context: CallbackContext
+  ) -> int:
+    if update.message.reply_to_message:
+      user = update.message.from_user
+      message_text = update.message.text
+      username = user.username
+      message_id = update.message.reply_to_message.message_id
+      message_object = {
+          "text": message_text,
+          "username": username,
+          "message_id": message_id,
+      }
+      message_string = json.dumps(message_object)
+      await cls.send_message_to_queue(
+          command="quiz_answer",
+          chat_id=update.effective_chat.id,
+          message_text=message_string,
+      )
+
+  @classmethod
   async def handle_bulk_unsubscribe(
       cls,
       update: Update,
@@ -366,6 +389,28 @@ class MagicBot:
       A coroutine
     """
     await cls.bot.send_photo(chat_id=chat_id, photo=image_url)
+
+  @classmethod
+  async def send_quiz_image_to_chat(
+      cls,
+      chat_id: str,
+      card_name: str,
+      image_url: str,
+  ):
+    """Sends an image to a user.
+
+    Args:
+      chat_id: id of the chat with the user
+      image_url: url of the image that will be sent to the user
+    Returns:
+      A coroutine
+    """
+    reply = await cls.bot.send_photo(chat_id=chat_id, photo=image_url)
+    reply_message_id = reply.message_id
+    await MongoClient.add_quiz_object(
+        card_name=card_name,
+        message_id=reply_message_id,
+    )
 
   @classmethod
   async def send_message_to_queue(
@@ -697,6 +742,27 @@ class MagicBot:
     )
 
   @classmethod
+  async def card_quiz_handler(
+      cls,
+      update: Update,
+      context: ContextTypes.DEFAULT_TYPE
+  ) -> None:
+    """Handler that responds to any message with /ci command and sends a 
+    corresponding message to the "from-user" queue.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    Returns:
+      A coroutine (?)
+    """
+    await cls.send_message_to_queue(
+        command="quiz",
+        chat_id=update.effective_chat.id,
+        message_text="",
+    )
+
+  @classmethod
   async def card_url_hanlder(
       cls,
       update: Update,
@@ -784,6 +850,7 @@ class MagicBot:
     app.add_handler(CommandHandler("c", cls.card_url_hanlder))
     app.add_handler(CommandHandler("cp", cls.card_price_handler))
     app.add_handler(CommandHandler("ci", cls.card_image_handler))
+    app.add_handler(CommandHandler("quiz", cls.card_quiz_handler))
     app.add_handler(CommandHandler("reg", cls.user_registration_handler))
     app.add_handler(CommandHandler("mydeckbox", cls.deckbox_check_handler))
     app.add_handler(CommandHandler("updatedeckbox", cls.deckbox_update_handler))
@@ -792,6 +859,10 @@ class MagicBot:
     app.add_handler(CommandHandler(
         "mydeckboxsubs",
         cls.deckbox_subscriptions_check_handler,
+    ))
+    app.add_handler(MessageHandler(
+        filters=filters.REPLY,
+        callback=cls.handle_reply,
     ))
     app.add_handler(MessageHandler(
         filters=filters.TEXT,

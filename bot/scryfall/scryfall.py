@@ -1,6 +1,6 @@
 """Module for working with scryfall API.
 """
-from bot.config.urls import SCRYFALL_GET_CARD_URL
+from bot.config.urls import SCRYFALL_GET_CARD_URL, SCRYFALL_GET_RANDOM_CARD_URL
 from bot.config.http_client import HttpClient
 
 class ScryfallFetcher:
@@ -25,6 +25,23 @@ class ScryfallFetcher:
       return None
 
   @classmethod
+  async def get_random_card(cls) -> dict | None:
+    """Fetches random card info from scryfall API by name
+
+    Returns:
+      A Response object or None if card doesn't exist
+    """
+    url = SCRYFALL_GET_RANDOM_CARD_URL
+    response = await HttpClient.HTTP_SESSION.get(url=url)
+    if response.status == 200:
+      response_json = await response.json()
+      if response_json.get("object") == "card":
+        return response_json
+      return None
+    else:
+      return None
+
+  @classmethod
   async def get_card_image(cls, card_name: str) -> str | None:
     """Fetches card info from scryfall API by name
 
@@ -38,6 +55,27 @@ class ScryfallFetcher:
     if response:
       image_url = response.get("image_uris", {})
       return image_url.get("normal")
+    return None
+
+  @classmethod
+  async def get_card_image_art(cls) -> dict | None:
+    """Fetches card info from scryfall API by name
+
+    Args:
+      card_name: name of the card
+    Returns:
+      A string with the image url or None if card doesn't exist
+    """
+    response = await cls.get_random_card()
+    image_url = None
+    if response:
+      image_url = response.get("image_uris", {})
+      card_name = response.get("name")
+      art = image_url.get("art_crop")
+      return {
+          "card_name": card_name,
+          "art": art,
+      }
     return None
 
   @classmethod

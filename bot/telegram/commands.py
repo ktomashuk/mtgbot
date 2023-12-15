@@ -61,6 +61,26 @@ class TelegramCommands:
       )
 
   @classmethod
+  async def show_quiz_image(
+      cls,
+      chat_id: str,
+  ):
+    card_object = await ScryfallFetcher.get_card_image_art()
+    if card_object:
+      return Utils.generate_outgoing_message(
+          command="quiz",
+          chat_id=chat_id,
+          message_text="",
+          options=card_object,
+      )
+    else:
+      return Utils.generate_outgoing_message(
+          command="text",
+          chat_id=chat_id,
+          message_text="Error generating a quiz. Please try again.",
+      )
+
+  @classmethod
   async def show_card_price(
       cls,
       chat_id: str,
@@ -77,6 +97,38 @@ class TelegramCommands:
       return cls.card_not_found(
           card_name=message_text,
           chat_id=chat_id,
+      )
+
+  @classmethod
+  async def handle_quiz_reply(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ):
+    message_dict = json.loads(message_text)
+    username = f"@{message_dict.get("username", "")}"
+    text = message_dict.get("text", "")
+    message_id = message_dict.get("message_id", "")
+    user_card_name = text.lower()
+    # Check if the quiz with this message id exists
+    quiz = await MongoClient.get_quiz_object(message_id=message_id)
+    if quiz:
+      response = f"{username} Sorry, the answer is not '{text}'."
+      quiz_card = quiz.get("card_name", "")
+      quiz_card_name = quiz_card.lower()
+      if len(user_card_name) < 5 and quiz_card_name == user_card_name or \
+      len(user_card_name) >= 5 and user_card_name in quiz_card_name:
+        response = f"{username} Correct! The answer is '{quiz_card}'!"
+      return Utils.generate_outgoing_message(
+          command="text",
+          chat_id=chat_id,
+          message_text=response,
+      )
+    else:
+      return Utils.generate_outgoing_message(
+          command="void",
+          chat_id=chat_id,
+          message_text="void",
       )
 
   @classmethod
@@ -999,6 +1051,15 @@ class TelegramCommands:
         )
       case "edhdanas":
         return await cls.edh_danas_send_poll(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      case "quiz":
+        return await cls.show_quiz_image(
+            chat_id=chat_id,
+        )
+      case "quiz_answer":
+        return await cls.handle_quiz_reply(
             chat_id=chat_id,
             message_text=message_text,
         )
