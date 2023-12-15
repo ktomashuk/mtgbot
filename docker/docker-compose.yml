@@ -34,7 +34,6 @@ services:
     image: from-user-listener:latest
     depends_on:
       - rabbitmq
-      - selenium-chrome
     networks:
       - bot_network
 
