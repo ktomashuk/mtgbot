@@ -8,3 +8,6 @@ For local setup:
 * Run the script by using ```./build_docker_images.sh``` to build docker images
 * In the /docker directory use ```docker compose up -d```
 * Send any message to the bot
+
+General diagram: <br>
+![Diagram](diagram.jpg)
