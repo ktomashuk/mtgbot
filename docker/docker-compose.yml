@@ -15,9 +15,6 @@ services:
     image: rabbitmq:3-management
     networks:
       - bot_network
-    environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
     restart: always
 
   telegram:
@@ -42,13 +39,6 @@ services:
     image: to-user-listener:latest
     networks:
       - bot_network
-    environment:
-      RABBITMQ_HOST: rabbit-mq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: user
-      RABBITMQ_PASSWORD: password
-      EXCHANGE_NAME: bot-exchange
-      TO_USER_QUEUE_NAME: to-user
     depends_on:
       - rabbitmq
     restart: always
