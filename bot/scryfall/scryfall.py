@@ -42,7 +42,7 @@ class ScryfallFetcher:
       return None
 
   @classmethod
-  async def get_card_image(cls, card_name: str) -> str | None:
+  async def get_card_image(cls, card_name: str) -> list[str] | None:
     """Fetches card info from scryfall API by name
 
     Args:
@@ -51,11 +51,19 @@ class ScryfallFetcher:
       A string with the image url or None if card doesn't exist
     """
     response = await cls.get_card(card_name=card_name)
-    image_url = None
-    if response:
-      image_url = response.get("image_uris", {})
-      return image_url.get("normal")
-    return None
+    results = []
+    if not response:
+      return results
+    faces = response.get("card_faces", None)
+    image_uri = response.get("image_uris", None)
+    if faces:
+      for face in faces:
+        image = face["image_uris"]["normal"]
+        results.append(image)
+    if image_uri:
+      image = image_uri["normal"]
+      results.append(image)
+    return results
 
   @classmethod
   async def get_card_image_art(cls) -> dict | None:

@@ -335,6 +335,7 @@ class MagicBot:
           chat_id=update.effective_chat.id,
           message_text=message_string,
       )
+      await update.message.reply_text("Searching...")
     return ConversationHandler.END
 
   @classmethod
@@ -360,6 +361,7 @@ class MagicBot:
           chat_id=update.effective_chat.id,
           message_text=username,
       )
+      await update.message.reply_text("Searching...")
 
   @classmethod
   async def cancel_conversation(
@@ -736,7 +738,10 @@ class MagicBot:
       A coroutine (?)
     """
     message_text = update.message.text
-    card_name = message_text.split("/ci ")[1]
+    split_message = message_text.split("/ci ")
+    if len(split_message) < 2:
+      return
+    card_name = split_message[1]
     print(f"Received a /ci command with text: {card_name}")
     await cls.send_message_to_queue(
         command="ci",
@@ -781,7 +786,10 @@ class MagicBot:
       A coroutine (?)
     """
     message_text = update.message.text
-    card_name = message_text.split("/c ")[1]
+    split_message = message_text.split("/c ")
+    if len(split_message) < 2:
+      return
+    card_name = split_message[1]
     print(f"Received a /c command with text: {card_name}")
     await cls.send_message_to_queue(
         command="c",
@@ -805,7 +813,10 @@ class MagicBot:
       A coroutine (?)
     """
     message_text = update.message.text
-    card_name = message_text.split("/cp ")[1]
+    split_message = message_text.split("/cp ")
+    if len(split_message) < 2:
+      return
+    card_name = split_message[1]
     print(f"Received a /cp command with text: {card_name}")
     await cls.send_message_to_queue(
         command="cp",
@@ -852,7 +863,6 @@ class MagicBot:
     app.add_handler(card_search_handler)
     app.add_handler(CommandHandler("c", cls.card_url_hanlder))
     app.add_handler(CommandHandler("cp", cls.card_price_handler))
-    app.add_handler(CommandHandler("fuck", cls.card_price_handler))
     app.add_handler(CommandHandler("ci", cls.card_image_handler))
     app.add_handler(CommandHandler("quiz", cls.card_quiz_handler))
     app.add_handler(CommandHandler("reg", cls.user_registration_handler))

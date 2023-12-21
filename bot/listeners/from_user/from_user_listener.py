@@ -3,7 +3,7 @@ import aio_pika
 import json
 from bot.config import config
 from bot.config.http_client import HttpClient
-from bot.telegram.commands import TelegramCommands
+from bot.backend.commands import TelegramCommands
 
 class FromUserListener:
   connection = None

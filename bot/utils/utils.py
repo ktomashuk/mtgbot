@@ -11,8 +11,8 @@ class Utils:
       command: str,
       chat_id: str,
       message_text: str,
-      options: list[str] | dict | None = None,
-      status: bool = True,
+      options: dict | None = None,
+      bot_type: str = "telegram",
   ) -> bytes:
     """Generates a message to be sent to a queue.
 
@@ -25,11 +25,13 @@ class Utils:
     Returns:
       A dict encoded into bytes
     """
+    if not options:
+      options = {}
     message = {
       "command": command,
       "chat_id": chat_id,
       "text": message_text,
-      "status": status,
+      "bot_type": bot_type,
       "options": options,
     }
     json_message = json.dumps(message)
@@ -79,6 +81,7 @@ class Utils:
     Returns:
       An index of a first found word starting with a letter or None if not found
     """
+    messages = []
     result_message = ""
     deckbox_ids = found_object.keys()
     for deckbox_id in deckbox_ids:
@@ -105,9 +108,14 @@ class Utils:
           card_message = f"<a href='{card_url}'>{name}</a>: {count}\n"
           deckbox_message += card_message
         result_message += deckbox_message
-    if result_message == "":
-      result_message = "No cards were found :("
-    return result_message
+        if len(result_message) > 2000:
+          messages.append(result_message)
+          result_message = ""
+    if result_message:
+      messages.append(result_message)
+    if not messages:
+      messages = ["No cards were found :("]
+    return messages
 
   @classmethod
   async def split_list_into_chunks(
@@ -123,13 +131,55 @@ class Utils:
     Returns:
       A list of lists
     """
-    if len(input_list) < 11:
+    if len(input_list) < max_length + 1:
       return input_list
     result = []
     while input_list:
       result.append(input_list[:max_length])
       input_list = input_list[max_length:]
     return result
+
+  @classmethod
+  async def construct_united_search_dict(
+      cls,
+      input_dicts: list,
+  ) -> dict:
+    """Splits a list into a list of lists with maximum length.
+
+    Args:
+      input_list: a list to be split
+      max_length: maximum length of resulting 
+    Returns:
+      A list of lists
+    """
+    merged_dict = {}
+    for dictionary in input_dicts:
+      for key, value_list in dictionary.items():
+        if key in merged_dict:
+          merged_dict[key].extend(value_list)
+        else:
+          merged_dict[key] = value_list.copy()
+    return merged_dict
+
+  @classmethod
+  async def construct_united_deckbox_matcher_dict(
+      cls,
+      input_dicts: list,
+  ) -> str:
+    """Splits a list into a list of lists with maximum length.
+
+    Args:
+      input_list: a list to be split
+      max_length: maximum length of resulting 
+    Returns:
+      A list of lists
+    """
+    merged_dict = {}
+    for dictionary in input_dicts:
+      for key, value in dictionary.items():
+        if key not in merged_dict:
+          merged_dict[key] = value
+    return merged_dict
 
   @classmethod
   def check_if_next_day(

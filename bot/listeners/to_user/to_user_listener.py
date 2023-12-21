@@ -70,51 +70,48 @@ class ToUserListener:
       print(f"Received {message.body} in the {config.TO_USER_QUEUE_NAME} queue")
       decoded_string = message.body.decode("utf-8")
       data_dict = json.loads(decoded_string)
-      command = data_dict.get("command")
-      chat_id = data_dict.get("chat_id")
-      message = data_dict.get("text")
-      status = data_dict.get("status")
-      options = data_dict.get("options", {})
-      if not options:
-        options = {}
-      match command:
-        case "text":
-          if isinstance(options, dict):
-            disable_preview = options.get("disable_preview", True)
-          await MagicBot.send_message_to_user(
-              chat_id=chat_id,
-              message=message,
-              disable_preview=disable_preview,
-          )
-        case "image":
-          await MagicBot.send_image_to_user(chat_id=chat_id, image_url=message)
-        case "menu":
-          disable_preview = True
-          if isinstance(options, dict):
-            disable_preview = options.get("disable_preview", True)
-          await MagicBot.send_menu_to_user(
-              chat_id=chat_id,
-              message=message,
-              registered=status,
-              disable_preview=disable_preview,
-          )
-        case "poll":
-          await MagicBot.send_poll_to_channel(
-              chat_id=chat_id,
-              message=message,
-              answers=options,
-          )
-        case "quiz":
-          if isinstance(options, dict):
+      command = data_dict.get("command", "")
+      bot_type = data_dict.get("bot_type", "")
+      chat_id = data_dict.get("chat_id", "")
+      message = data_dict.get("text", "")
+      options = data_dict.get("options", dict())
+      # Telegram commands
+      if bot_type == "telegram":
+        match command:
+          case "text":
+            await MagicBot.send_message_to_user(
+                chat_id=chat_id,
+                message=message,
+                disable_preview=options.get("disable_preview", True),
+            )
+          case "image":
+            await MagicBot.send_image_to_user(
+                chat_id=chat_id,
+                image_url=message,
+            )
+          case "menu":
+            await MagicBot.send_menu_to_user(
+                chat_id=chat_id,
+                message=message,
+                registered=options.get("registered", True),
+                disable_preview=options.get("disable_preview", True),
+            )
+          case "poll":
+            await MagicBot.send_poll_to_channel(
+                chat_id=chat_id,
+                message=message,
+                answers=options,
+            )
+          case "quiz":
             card_name = options.get("card_name", "")
             art = options.get("art", "")
-          await MagicBot.send_quiz_image_to_chat(
-              chat_id=chat_id,
-              card_name=card_name,
-              image_url=art,
-          )
-        case "void":
-          pass
+            await MagicBot.send_quiz_image_to_chat(
+                chat_id=chat_id,
+                card_name=card_name,
+                image_url=art,
+            )
+          case "void":
+            pass
 
   @classmethod
   async def run_listener(cls):

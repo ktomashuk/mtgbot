@@ -72,6 +72,29 @@ class MongoClient:
     return result
 
   @classmethod
+  async def match_deckbox_tradelist_ids_to_names(
+      cls,
+      deckbox_names: list[str],
+  ) -> dict | None:
+    """Fetches a deckbox with a given ID.
+
+    Args:
+      deckbox: ID of the deckbox tradelist to get
+    Returns:
+      A dict with list details or None if list doesn't exist
+    """
+    query = {"account_name": {"$in": deckbox_names}}
+    cursor = cls.deckbox_tradelist_colletion.find(query)
+    results = {}
+    async for document in cursor:
+      deckbox_id = document.get("deckbox_id")
+      name = document.get("account_name")
+      # Only add to results if deckbox_id is in the input list
+      if name in deckbox_names:
+          results[deckbox_id] = name
+    return results
+
+  @classmethod
   async def check_if_user_exists(
       cls,
       telegram_name: str | None = None,
@@ -370,6 +393,35 @@ class MongoClient:
       )
       account_name = result.get("account_name")
     return account_name
+
+  @classmethod
+  async def get_deckbox_id(
+      cls,
+      deckbox_name: str,
+      tradelist: bool = False,
+      wishlist: bool = False,
+  ) -> str:
+    """Fetches the account name for the chosen deckbox list ID.
+
+    Args:
+      deckbox_name: name of the deckbox account
+      tradelist: set to True when searching for tradelists
+      wishlist: set to True when searching for wishlists
+    Returns:
+      A string with the username associated with the decklist ID
+    """
+    deckbox_id = ""
+    if tradelist:
+      result = await cls.deckbox_tradelist_colletion.find_one(
+          {"account_name": deckbox_name.lower()}
+      )
+      deckbox_id = result.get("deckbox_id", "")
+    if wishlist:
+      result = await cls.deckbox_wishlist_collection.find_one(
+          {"account_name": deckbox_name.lower()}
+      )
+      deckbox_id = result.get("deckbox_id", "")
+    return deckbox_id
 
   @classmethod
   async def add_deckbox_to_user(
