@@ -290,6 +290,7 @@ class MongoClient:
   @classmethod
   async def check_edh_danas(
       cls,
+      timestamp: str,
   ) -> bool:
     """Tries to fetch a tradelist with a given deckbox ID from the 
     "deckbox_tradelists" collection and checks when it was cached.
@@ -302,12 +303,15 @@ class MongoClient:
       True if the deckbox cache is younger than 12 hours, False if it isn't
     """
     result = None
-    result = await cls.edh_danas_collection.find_one()
+    result = await cls.edh_danas_collection.find_one(
+        {"timestamp": timestamp}
+    )
     return result
 
   @classmethod
   async def delete_edh_danas(
       cls,
+      timestamp: str,
   ) -> bool:
     """Tries to fetch a tradelist with a given deckbox ID from the 
     "deckbox_tradelists" collection and checks when it was cached.
@@ -319,7 +323,9 @@ class MongoClient:
     Returns:
       True if the deckbox cache is younger than 12 hours, False if it isn't
     """
-    latest_record = await cls.edh_danas_collection.find_one()
+    latest_record = await cls.edh_danas_collection.find_one(
+        {"timestamp": timestamp}
+    )
     if latest_record is not None:
         # Delete the record using its _id
         delete_result = await cls.edh_danas_collection.delete_one(

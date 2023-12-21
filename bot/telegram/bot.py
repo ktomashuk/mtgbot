@@ -62,6 +62,27 @@ class MagicBot:
     )
 
   @classmethod
+  async def forward_message_to_chat(
+      cls,
+      from_chat_id: str,
+      to_chat_id: str,
+      message_id: str,
+  ):
+    """Sends a message to a user.
+
+    Args:
+      chat_id: id of the chat with the user
+      message: message that will be sent to the user
+    Returns:
+      A coroutine
+    """
+    await cls.bot.forward_message(
+        chat_id=to_chat_id,
+        from_chat_id=from_chat_id,
+        message_id=message_id,
+    )
+
+  @classmethod
   async def send_menu_to_user(
       cls,
       chat_id: str,
@@ -85,7 +106,7 @@ class MagicBot:
           ["/dbsub", "/dbunsub"],
           ["/regdeckbox", "/updatedeckbox"],
           ["/mydeckbox", "/mydeckboxsubs"],
-          ["/help"],
+          ["/help", "/edhdanas"],
       ]
     reply_markup = ReplyKeyboardMarkup(
         keyboard,
@@ -117,7 +138,6 @@ class MagicBot:
     Returns:
       A coroutine
     """
-    print("STARTED SENDING POLL")
     poll_message = await cls.bot.send_poll(
         chat_id=chat_id,
         question=message,
@@ -125,16 +145,15 @@ class MagicBot:
         is_anonymous=False,
     )
     message_id = poll_message.message_id
-    print(f"SENT POLL MESSAGE WITH ID {message_id}")
     now = datetime.now()
-    datetime_string = now.strftime("%Y-%m-%d %H:%M:%S")
+    datetime_string = now.strftime("%Y-%m-%d")
     edh_danas_object = {
+      "chat_id": chat_id,
       "message_id": message_id,
       "timestamp": datetime_string,
     }
     result = await MongoClient.add_edh_danas(object=edh_danas_object)
-    print(f"ADDING POLL TO MONGO: {result}")
-    return edh_danas_object
+    return result
 
   @classmethod
   async def start_bulk_subsribe(
@@ -485,17 +504,22 @@ class MagicBot:
     Returns:
       A coroutine (?)
     """
+    chat_type = ""
+    if update.effective_chat.type == "private":
+      chat_type = "private"
+    else:
+      chat_type = "group"
     message_object = {
-          "message": "EDH danas?",
-          "options": ["Da", "Ne", "Ne znam"],
-      }
+        "message": "EDH danas?",
+        "options": ["Da", "Ne", "Ne znam"],
+        "chat_type": chat_type,
+    }
     message_string = json.dumps(message_object)
-    if update.effective_chat.type != "private":
-      await cls.send_message_to_queue(
-          command="edhdanas",
-          chat_id=update.effective_chat.id,
-          message_text=message_string,
-      )
+    await cls.send_message_to_queue(
+        command="edhdanas",
+        chat_id=update.effective_chat.id,
+        message_text=message_string,
+    )
 
   @classmethod
   async def user_registration_handler(
@@ -868,6 +892,7 @@ class MagicBot:
     app.add_handler(CommandHandler("reg", cls.user_registration_handler))
     app.add_handler(CommandHandler("mydeckbox", cls.deckbox_check_handler))
     app.add_handler(CommandHandler("updatedeckbox", cls.deckbox_update_handler))
+    app.add_handler(CommandHandler("edhdanas", cls.edh_danas_handler))
     app.add_handler(CommandHandler("wish", cls.wishlist_search_handler))
     app.add_handler(CommandHandler("help", cls.any_message_handler))
     app.add_handler(CommandHandler(

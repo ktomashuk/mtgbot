@@ -102,6 +102,12 @@ class ToUserListener:
                 message=message,
                 answers=options,
             )
+          case "forward":
+            await MagicBot.forward_message_to_chat(
+                from_chat_id=options.get("chat_id", ""),
+                to_chat_id=chat_id,
+                message_id=options.get("message_id", ""),
+            )
           case "quiz":
             card_name = options.get("card_name", "")
             art = options.get("art", "")

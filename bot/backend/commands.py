@@ -127,10 +127,11 @@ class TelegramCommands:
       chat_id: str,
   ):
     text = (
-        "<b>Scryfall commands:</b>\n"
-        "/c cardname - search for a card on scryfall\n"
-        "/ci cardname - search for a card image on scryfall\n"
-        "/cp cardname - search for a card price on scryfall\n"
+        "<b>Chat commands:</b>\n"
+        "/c <cardname> - search for a card on scryfall\n"
+        "/ci <cardname> - search for a card image on scryfall\n"
+        "/cp <cardname> - search for a card price on scryfall\n"
+        "/edhdanas - create a EDH danas poll or forward it if it exists\n"
         "<b>Account commands:</b>\n"
         "/reg - register you telegram account\n"
         "<b>Deckbox commands:</b>\n"
@@ -159,31 +160,34 @@ class TelegramCommands:
     message_dict = json.loads(message_text)
     message = message_dict.get("message", "")
     options = message_dict.get("options")
+    chat_type = message_dict.get("chat_type")
     now = datetime.now()
     datetime_string = now.strftime("%Y-%m-%d")
-    existing = await MongoClient.check_edh_danas()
-    # if existing:
-    #   existing_date = existing.get("timestamp")
-    #   check_if_older = Utils.check_if_next_day(
-    #       current_day=datetime_string,
-    #       previous_day=existing_date,
-    #   )
-    #   if check_if_older:
-    #     print("FOUND DANAS AND IT'S OLDER")
-    #   else:
-    #     print("FOUND DANAS AND IT'S NEW")
-    #   return Utils.generate_outgoing_message(
-    #       command="text",
-    #       chat_id=chat_id,
-    #       message_text="FOUND",
-    #   )
-    # else:
-    return Utils.generate_outgoing_message(
-        command="poll",
-        chat_id=chat_id,
-        message_text=message,
-        options=options,
-    )
+    existing = await MongoClient.check_edh_danas(timestamp=datetime_string)
+    if existing:
+      options = {
+          "chat_id": existing.get("chat_id"),
+          "message_id": existing.get("message_id"),
+      }
+      return Utils.generate_outgoing_message(
+          command="forward",
+          chat_id=chat_id,
+          message_text="",
+          options=options,
+      )
+    elif not existing and chat_type == "group":
+      return Utils.generate_outgoing_message(
+          command="poll",
+          chat_id=chat_id,
+          message_text=message,
+          options=options,
+      )
+    elif not existing and chat_type == "private":
+      return Utils.generate_outgoing_message(
+          command="text",
+          chat_id=chat_id,
+          message_text="No EDH Danas yet. Perhaps you shoud create it?",
+      )
 
   @classmethod
   async def register_user(
