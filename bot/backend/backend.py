@@ -29,6 +29,25 @@ class Backend:
         )
 
   @classmethod
+  def ambiguous_card(
+      cls,
+      chat_id: str
+  ) -> bytes:
+    """Sends an error saying the user should be more specific.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+    Returns:
+      A dict with message encoded into bytes
+    """
+    text = "Please be more specific!"
+    return Utils.generate_outgoing_message(
+            command="text",
+            chat_id=chat_id,
+            message_text=text,
+        )
+
+  @classmethod
   async def add_deckbox_to_mongo(
       cls,
       deckbox_id: str,

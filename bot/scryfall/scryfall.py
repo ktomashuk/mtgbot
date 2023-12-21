@@ -16,13 +16,8 @@ class ScryfallFetcher:
     """
     url = SCRYFALL_GET_CARD_URL.format(name=card_name)
     response = await HttpClient.HTTP_SESSION.get(url=url)
-    if response.status == 200:
-      response_json = await response.json()
-      if response_json.get("object") == "card":
-        return response_json
-      return None
-    else:
-      return None
+    response_json = await response.json()
+    return response_json
 
   @classmethod
   async def get_random_card(cls) -> dict | None:
@@ -42,7 +37,7 @@ class ScryfallFetcher:
       return None
 
   @classmethod
-  async def get_card_image(cls, card_name: str) -> list[str] | None:
+  async def get_card_image(cls, card_name: str) -> list[str] | str | None:
     """Gets card images for a card with the chosen name.
 
     Args:
@@ -54,6 +49,12 @@ class ScryfallFetcher:
     results = []
     if not response:
       return results
+    response_object = response.get("object")
+    response_type = response.get("type")
+    if response_object == "error" and response_type == "ambiguous":
+      return "ambiguous"
+    elif response_object == "error" and not response_type:
+      return "not_found"
     faces = response.get("card_faces", None)
     image_uri = response.get("image_uris", None)
     if faces:
@@ -94,6 +95,12 @@ class ScryfallFetcher:
       A string with the card url or None if card doesn't exist
     """
     response = await cls.get_card(card_name=card_name)
+    response_object = response.get("object")
+    response_type = response.get("type")
+    if response_object == "error" and response_type == "ambiguous":
+      return "ambiguous"
+    elif response_object == "error" and not response_type:
+      return "not_found"
     card_url = None
     if response:
       card_url = response.get("scryfall_uri")
@@ -109,6 +116,12 @@ class ScryfallFetcher:
       A string with prices or None if card doesn't exist
     """
     response = await cls.get_card(card_name=card_name)
+    response_object = response.get("object")
+    response_type = response.get("type")
+    if response_object == "error" and response_type == "ambiguous":
+      return "ambiguous"
+    elif response_object == "error" and not response_type:
+      return "not_found"
     text = None
     if response:
       full_name = response.get("name")

@@ -514,9 +514,9 @@ class MagicBot:
     if update.effective_chat.type != "private":
       return
     await cls.send_message_to_queue(
-        command="any_message",
+        command="help",
         chat_id=update.effective_chat.id,
-        message_text=update.message.text,
+        message_text="",
     )
 
   @classmethod

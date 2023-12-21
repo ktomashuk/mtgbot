@@ -26,17 +26,21 @@ class TelegramCommands:
       A dict with message encoded into bytes
     """
     card_uri = await ScryfallFetcher.get_card_url(card_name=message_text)
-    if card_uri:
+    if card_uri == "ambiguous":
+      return Backend.ambiguous_card(
+          chat_id=chat_id,
+      )
+    elif card_uri == "not_found":
+      return Backend.card_not_found(
+          card_name=message_text,
+          chat_id=chat_id,
+      )
+    else:
       return Utils.generate_outgoing_message(
           command="text",
           chat_id=chat_id,
           message_text=card_uri,
           options={"disable_preview": False},
-      )
-    else:
-      return Backend.card_not_found(
-          card_name=message_text,
-          chat_id=chat_id,
       )
 
   @classmethod
@@ -54,7 +58,16 @@ class TelegramCommands:
       A dict with message encoded into bytes
     """
     card_images = await ScryfallFetcher.get_card_image(card_name=message_text)
-    if card_images:
+    if card_images == "ambiguous":
+      return Backend.ambiguous_card(
+          chat_id=chat_id,
+      )
+    elif card_images == "not_found":
+      return Backend.card_not_found(
+          card_name=message_text,
+          chat_id=chat_id,
+      )
+    else:
       image_results = []
       for image in card_images:
         message =  Utils.generate_outgoing_message(
@@ -64,11 +77,6 @@ class TelegramCommands:
         )
         image_results.append(message)
       return image_results
-    else:
-      return Backend.card_not_found(
-          card_name=message_text,
-          chat_id=chat_id,
-      )
 
   @classmethod
   async def show_quiz_image(
@@ -112,16 +120,20 @@ class TelegramCommands:
       A dict with message encoded into bytes
     """
     card_prices = await ScryfallFetcher.get_card_prices(card_name=message_text)
-    if card_prices:
+    if card_prices == "ambiguous":
+      return Backend.ambiguous_card(
+          chat_id=chat_id,
+      )
+    elif card_prices == "not_found":
+      return Backend.card_not_found(
+          card_name=message_text,
+          chat_id=chat_id,
+      )
+    else:
       return Utils.generate_outgoing_message(
           command="text",
           chat_id=chat_id,
           message_text=card_prices,
-      )
-    else:
-      return Backend.card_not_found(
-          card_name=message_text,
-          chat_id=chat_id,
       )
 
   @classmethod
@@ -176,9 +188,9 @@ class TelegramCommands:
     """
     text = (
         "<b>Chat commands:</b>\n"
-        "/c <cardname> - search for a card on scryfall\n"
-        "/ci <cardname> - search for a card image on scryfall\n"
-        "/cp <cardname> - search for a card price on scryfall\n"
+        "/c cardname - search for a card on scryfall\n"
+        "/ci cardname - search for a card image on scryfall\n"
+        "/cp cardname - search for a card price on scryfall\n"
         "/edhdanas - create a EDH danas poll or forward it if it exists\n"
         "<b>Account commands:</b>\n"
         "/reg - register you telegram account\n"
