@@ -1,3 +1,5 @@
+"""Module for resolving commands sent by from-user-listener.
+"""
 import json
 from bot.deckbox.deckbox import Deckbox
 from bot.scryfall.scryfall import ScryfallFetcher
@@ -14,7 +16,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Sends a full card URL to the chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with card URL
+    Returns:
+      A dict with message encoded into bytes
+    """
     card_uri = await ScryfallFetcher.get_card_url(card_name=message_text)
     if card_uri:
       return Utils.generate_outgoing_message(
@@ -34,7 +44,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Sends a card Image to the chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with card image URL
+    Returns:
+      A dict with message encoded into bytes
+    """
     card_images = await ScryfallFetcher.get_card_image(card_name=message_text)
     if card_images:
       image_results = []
@@ -56,7 +74,14 @@ class TelegramCommands:
   async def show_quiz_image(
       cls,
       chat_id: str,
-  ):
+  ) -> bytes:
+    """Sends a quiz card image URL to the chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+    Returns:
+      A dict with message encoded into bytes
+    """
     card_object = await ScryfallFetcher.get_card_image_art()
     if card_object:
       return Utils.generate_outgoing_message(
@@ -77,7 +102,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Sends a card prices to the chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with card name
+    Returns:
+      A dict with message encoded into bytes
+    """
     card_prices = await ScryfallFetcher.get_card_prices(card_name=message_text)
     if card_prices:
       return Utils.generate_outgoing_message(
@@ -96,7 +129,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Resolves user reply to the quiz.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with the dict containing user answer data
+    Returns:
+      A dict with message encoded into bytes
+    """
     message_dict = json.loads(message_text)
     text = message_dict.get("text", "")
     message_id = message_dict.get("message_id", "")
@@ -125,7 +166,14 @@ class TelegramCommands:
   async def show_help(
       cls,
       chat_id: str,
-  ):
+  ) -> bytes:
+    """Sends a message with help info to the user.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+    Returns:
+      A dict with message encoded into bytes
+    """
     text = (
         "<b>Chat commands:</b>\n"
         "/c <cardname> - search for a card on scryfall\n"
@@ -156,7 +204,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Sends a EDH dans poll to the chat or forwards the existing one.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with the dict containing EDH danas data
+    Returns:
+      A dict with message encoded into bytes
+    """
     message_dict = json.loads(message_text)
     message = message_dict.get("message", "")
     options = message_dict.get("options")
@@ -194,7 +250,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Registers a user by adding them to the DB.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
     if not message_text or message_text == "":
       return Utils.generate_outgoing_message(
           command="text",
@@ -237,7 +301,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Sends a menu to the chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
     if not message_text or message_text == "":
       return Utils.generate_outgoing_message(
           command="text",
@@ -261,7 +333,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Updates user deckbox by re-caching it.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
     telegram_name = f"@{message_text}"
     # Check if the user exists in mongo db
     user_exists = await MongoClient.check_if_user_exists(
@@ -328,7 +408,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Adds a deckbox to user in the DB.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with dict containing user name and deckbox name
+    Returns:
+      A dict with message encoded into bytes
+    """
     message_dict = json.loads(message_text)
     telegram_name = f"@{message_dict.get("telegram", "")}"
     deckbox = message_dict.get("deckbox")
@@ -400,7 +488,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Adds a new subscription to the user in the DB.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with dict with user name and deckbox to add
+    Returns:
+      A dict with message encoded into bytes
+    """
     message_dict = json.loads(message_text)
     telegram_name = f"@{message_dict.get("telegram", "")}"
     deckbox = message_dict.get("deckbox")
@@ -470,7 +566,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Removes a new subscription to the user in the DB.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with dict with user name and deckbox to remove
+    Returns:
+      A dict with message encoded into bytes
+    """
     message_dict = json.loads(message_text)
     telegram_name = f"@{message_dict.get("telegram", "")}"
     deckbox = message_dict.get("deckbox")
@@ -506,7 +610,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Checks user's deckbox and sends them it's name.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
     if not message_text or message_text == "":
       return Utils.generate_outgoing_message(
           command="text",
@@ -546,7 +658,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Checks user's deckbox subscriptions and sends them to the user.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
     if not message_text or message_text == "":
       return Utils.generate_outgoing_message(
           command="text",
@@ -583,10 +703,39 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Searches for cards in user subscriptions.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with dict containing user name and cards to search for
+    Returns:
+      A dict with message encoded into bytes
+    """
     message_dict = json.loads(message_text)
     telegram_name = f"@{message_dict.get("telegram", "")}"
     received_cards = message_dict.get("cards")
+    # Check if the user exists in mongo db
+    user_exists = await MongoClient.check_if_user_exists(
+        telegram_name=telegram_name,
+    )
+    if not user_exists:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"You need to register first! Use /reg to register.",
+          options={"registered": False},
+      )
+    # Check if user is subscrbed to deckboxes
+    sub_dict = await MongoClient.get_user_subscriptions(
+        telegram=telegram_name,
+    )
+    if not sub_dict:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"You are not subscribed to any deckboxes!",
+      )
     all_dicts = []
     if len(received_cards) > 10:
       cards_chunks = await Utils.split_list_into_chunks(
@@ -595,14 +744,12 @@ class TelegramCommands:
       )
       for chunk in cards_chunks:
         chunk_result = await Backend.search_for_cards(
-            chat_id=chat_id,
             received_cards=chunk,
             telegram_name=telegram_name,
         )
         all_dicts.append(chunk_result)
     else:
       search_result = await Backend.search_for_cards(
-          chat_id=chat_id,
           received_cards=received_cards,
           telegram_name=telegram_name,
         )
@@ -632,7 +779,15 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Searches for cards from user wishlist in user subscriptions.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
     telegram_name = f"@{message_text}"
     # Check if the user exists in mongo db
     user_exists = await MongoClient.check_if_user_exists(
@@ -644,6 +799,16 @@ class TelegramCommands:
           chat_id=chat_id,
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
+      )
+    # Check if user is subscrbed to deckboxes
+    sub_dict = await MongoClient.get_user_subscriptions(
+        telegram=telegram_name,
+    )
+    if not sub_dict:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"You are not subscribed to any deckboxes!",
       )
     # Find user's wishlist
     user_data = await MongoClient.get_user_data(telegram=telegram_name)
@@ -665,14 +830,12 @@ class TelegramCommands:
       )
       for chunk in cards_chunks:
         chunk_result = await Backend.wish_for_cards(
-            chat_id=chat_id,
             received_cards=chunk,
             telegram_name=telegram_name,
         )
         wish_results.append(chunk_result)
     else:
       result = await Backend.wish_for_cards(
-          chat_id=chat_id,
           received_cards=wishlist_cards_list,
           telegram_name=telegram_name,
       )
@@ -703,7 +866,16 @@ class TelegramCommands:
       chat_id: str,
       command: str,
       message_text: str,
-  ):
+  ) -> bytes:
+    """Resolves a command that came in the queue.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      command: received command
+      message_text: text that will be send to the command function
+    Returns:
+      A dict with message encoded into bytes
+    """
     match command:
       case "any_message" | "help":
         return await cls.show_help(chat_id=chat_id)
@@ -731,62 +903,72 @@ class TelegramCommands:
             chat_id=chat_id,
             message_text=message_text,
         )
-      # Registering a deckbox tradelist for a user
+      # Registering a deckbox for a user
       case "regdeckbox":
         return await cls.add_deckbox_to_user(
             chat_id=chat_id,
             message_text=message_text,
         )
-      # Checking current registered deckbox tradelist
+      # Checking current registered deckbox
       case "mydeckbox":
         return await cls.check_user_deckbox(
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Updating users deckbox
       case "updatedeckbox":
         return await cls.update_user_deckbox(
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Adding a subscription to user
       case "dbsub":
         return await cls.add_subscription_to_user(
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Removing a subscription from user
       case "dbunsub":
         return await cls.remove_subscription_from_user(
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Checking user subscriptions
       case "mydeckboxsubs":
         return await cls.check_user_deckbox_subscriptions(
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Searching for chosen cards
       case "search":
         return await cls.bulk_search_cards(
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Searching for cards from a wishlist
       case "wish":
         return await cls.search_cards_from_wishlist(
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Sending a starting menu
       case "start":
         return await cls.get_user_menu(
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Creating/forwarding a EDH danas poll
       case "edhdanas":
         return await cls.edh_danas_send_poll(
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Sending a new quiz message
       case "quiz":
         return await cls.show_quiz_image(
             chat_id=chat_id,
         )
+      # Handling quiz replies
       case "quiz_answer":
         return await cls.handle_quiz_reply(
             chat_id=chat_id,

@@ -1,3 +1,5 @@
+"""A module that consumes messages in"to-user" queue in RabbitMQ.
+"""
 import asyncio
 import aio_pika
 import json
@@ -12,6 +14,8 @@ class FromUserListener:
 
   @classmethod
   async def connect(cls):
+    """Creates a connection to RabbitMQ
+    """
     retries = config.LISTENER_RECONNECT_RETRIES
     delay = config.LISTENER_RECONNECT_DELAY
     for attempt in range(retries):
@@ -37,6 +41,8 @@ class FromUserListener:
 
   @classmethod
   async def monitor_connection(cls):
+    """Checks if the connection is lost and attempts to reconnect.
+    """
     while cls.monitoring:
       await asyncio.sleep(config.LISTENER_HEALTH_CHECK_DELAY)
       if cls.connection is None or cls.connection.is_closed:
@@ -49,6 +55,8 @@ class FromUserListener:
 
   @classmethod
   async def setup_queues(cls):
+    """Sets up the exchange and queues if they don't exist yet.
+    """
     cls.channel = await cls.connection.channel()
     await cls.channel.declare_exchange(
         name=config.EXCHANGE_NAME,
@@ -66,6 +74,8 @@ class FromUserListener:
 
   @classmethod
   async def callback(cls, message: aio_pika.IncomingMessage):
+    """Consumes the messages and resolves the corresponding backend commands.
+    """
     async with message.process():
       async with cls.connection.channel() as channel:
         decoded_string = message.body.decode("utf-8")
@@ -96,6 +106,8 @@ class FromUserListener:
 
   @classmethod
   async def run_listener(cls):
+    """Starts RabbitMQ listener.
+    """
     await HttpClient.init_client()
     connection = await cls.connect()
     monitor_connection = asyncio.create_task(cls.monitor_connection())

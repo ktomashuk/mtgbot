@@ -28,7 +28,13 @@ class MagicBot:
       cls,
       update: Update,
       context: ContextTypes.DEFAULT_TYPE,
-  ):
+  ) -> None:
+    """Handles any message received by a bot.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    """
     if update.effective_chat.type != "private":
       return
     user = update.message.from_user
@@ -45,14 +51,12 @@ class MagicBot:
       chat_id: str,
       message: str,
       disable_preview: bool = True,
-  ):
+  ) -> None:
     """Sends a message to a user.
 
     Args:
       chat_id: id of the chat with the user
       message: message that will be sent to the user
-    Returns:
-      A coroutine
     """
     await cls.bot.send_message(
         chat_id=chat_id,
@@ -67,14 +71,13 @@ class MagicBot:
       from_chat_id: str,
       to_chat_id: str,
       message_id: str,
-  ):
-    """Sends a message to a user.
+  ) -> None:
+    """Forwards a message from chat to chat.
 
     Args:
-      chat_id: id of the chat with the user
-      message: message that will be sent to the user
-    Returns:
-      A coroutine
+      from_chat_id: id of the chat the message is forwarded from
+      to_chat_id: id of the chat the message is forwarded to
+      message_id: ID of the forwarded message 
     """
     await cls.bot.forward_message(
         chat_id=to_chat_id,
@@ -89,15 +92,14 @@ class MagicBot:
       message: str,
       registered: bool,
       disable_preview: bool = True,
-  ):
+  ) -> None:
     """Sends a menu to a user.
 
     Args:
       chat_id: id of the chat with the user
       message: message that will be sent to the user
-      reply_markup: a markup for the keyboard
-    Returns:
-      A coroutine
+      registered: check if the user is registere,
+      disable_preview: check if the url previews should be disabled
     """
     keyboard = [["/reg",]]
     if registered:
@@ -128,15 +130,15 @@ class MagicBot:
       chat_id: str,
       message: str,
       answers: list[str],
-  ):
-    """Sends a menu to a user.
+  ) -> bool:
+    """Sends a poll to the channel.
 
     Args:
       chat_id: id of the chat with the user
-      message: message that will be sent to the user
-      reply_markup: a markup for the keyboard
+      message: message in the poll
+      answers: a list of answers
     Returns:
-      A coroutine
+      A bool showing if poll result was added to mongo
     """
     poll_message = await cls.bot.send_poll(
         chat_id=chat_id,
@@ -160,14 +162,14 @@ class MagicBot:
       cls,
       update: Update,
       context: ContextTypes.DEFAULT_TYPE,
-  ):
-    """Sends a message to a user.
+  ) -> int:
+    """Handles opening the input for subscribing to deckboxes.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
     Returns:
-      A an input
+      An input ID
     """
     if update.effective_chat.type != "private":
       return
@@ -187,14 +189,14 @@ class MagicBot:
       cls,
       update: Update,
       context: ContextTypes.DEFAULT_TYPE,
-  ):
-    """Sends a message to a user.
+  ) -> int:
+    """Handles opening the input for searching cards.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
     Returns:
-      A an input
+      An input ID
     """
     if update.effective_chat.type != "private":
       return
@@ -214,14 +216,14 @@ class MagicBot:
       cls,
       update: Update,
       context: ContextTypes.DEFAULT_TYPE
-  ):
-    """Sends a message to a user.
+  ) -> int:
+    """Handles opening the input for unsubscribing from deckboxes.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
     Returns:
-      A an input
+      An input ID
     """
     if update.effective_chat.type != "private":
       return
@@ -241,14 +243,14 @@ class MagicBot:
       cls,
       update: Update,
       context: ContextTypes.DEFAULT_TYPE
-  ):
-    """Sends a message to a user.
+  ) -> int:
+    """Handles opening the input for registering a deckboxe.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
     Returns:
-      An input
+      An input ID
     """
     if update.effective_chat.type != "private":
       return
@@ -267,7 +269,15 @@ class MagicBot:
       cls,
       update: Update,
       context: CallbackContext
-  ) -> int:
+  ) -> ConversationHandler.END:
+    """Processes the input for subscribing to deckboxes.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    Returns:
+      A conversation handler that stops the conversation with the user
+    """
     if update.effective_chat.type == "private":
       user = update.message.from_user
       username = user.username
@@ -291,7 +301,13 @@ class MagicBot:
       cls,
       update: Update,
       context: CallbackContext
-  ) -> int:
+  ):
+    """Handles replies to quiz prompts.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    """
     if update.message.reply_to_message:
       user = update.message.from_user
       message_text = update.message.text
@@ -315,6 +331,14 @@ class MagicBot:
       update: Update,
       context: CallbackContext
   ) -> int:
+    """Processes the input for unsubscribing from deckboxes.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    Returns:
+      A conversation handler that stops the conversation with the user
+    """
     if update.effective_chat.type == "private":
       user = update.message.from_user
       username = user.username
@@ -339,6 +363,14 @@ class MagicBot:
       update: Update,
       context: CallbackContext
   ) -> int:
+    """Processes the input for searchng for cards.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    Returns:
+      A conversation handler that stops the conversation with the user
+    """
     if update.effective_chat.type == "private":
       user = update.message.from_user
       username = user.username
@@ -363,14 +395,11 @@ class MagicBot:
       update: Update,
       context: ContextTypes.DEFAULT_TYPE
   ) -> None:
-    """Handler that responds to a private message with /dbsub command and sends
-    a corresponding message to the "from-user" queue.
+    """Handles searching for cards in user's wishlist.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     if update.effective_chat.type == "private":
       user = update.message.from_user
@@ -387,7 +416,15 @@ class MagicBot:
       cls,
       update: Update,
       context: CallbackContext,
-  ) -> int:
+  ) -> ConversationHandler.END:
+    """Cancels the conversation manually.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    Returns:
+      A conversation handler that stops the conversation with the user
+    """
     user = update.message.from_user
     username = user.username
     await cls.send_message_to_queue(
@@ -402,14 +439,12 @@ class MagicBot:
       cls,
       chat_id: str,
       image_url: str,
-  ):
+  ) -> None:
     """Sends an image to a user.
 
     Args:
       chat_id: id of the chat with the user
       image_url: url of the image that will be sent to the user
-    Returns:
-      A coroutine
     """
     await cls.bot.send_photo(chat_id=chat_id, photo=image_url)
 
@@ -419,14 +454,12 @@ class MagicBot:
       chat_id: str,
       card_name: str,
       image_url: str,
-  ):
-    """Sends an image to a user.
+  ) -> None:
+    """Sends an quiz image to chat and adds it to mongo db.
 
     Args:
       chat_id: id of the chat with the user
       image_url: url of the image that will be sent to the user
-    Returns:
-      A coroutine
     """
     reply = await cls.bot.send_photo(chat_id=chat_id, photo=image_url)
     reply_message_id = reply.message_id
@@ -448,8 +481,6 @@ class MagicBot:
       command: name of the command that should be processed
       chat_id: id of the chat with the user
       message_text: message that will be sent to the user
-    Returns:
-      A coroutine (?)
     """
     message = Utils.generate_outgoing_message(
         command=command,
@@ -479,8 +510,6 @@ class MagicBot:
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     if update.effective_chat.type != "private":
       return
@@ -496,13 +525,11 @@ class MagicBot:
       update: Update,
       context: ContextTypes.DEFAULT_TYPE
   ) -> None:
-    """Handler that responds to /edhdanas command and sends message to queue.
+    """Handles creating a EDH danas poll.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     chat_type = ""
     if update.effective_chat.type == "private":
@@ -533,8 +560,6 @@ class MagicBot:
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     if update.effective_chat.type == "private":
       user = update.message.from_user
@@ -546,83 +571,18 @@ class MagicBot:
       )
 
   @classmethod
-  async def deckbox_sub_handler(
-      cls,
-      update: Update,
-      context: ContextTypes.DEFAULT_TYPE
-  ) -> None:
-    """Handler that responds to a private message with /dbsub command and sends
-    a corresponding message to the "from-user" queue.
-
-    Args:
-      update: telegram-bot parameter
-      context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
-    """
-    if update.effective_chat.type == "private":
-      user = update.message.from_user
-      username = user.username
-      message_text = update.message.text
-      deckbox = message_text.split("/dbsub ")[1]
-      message_object = {
-          "telegram": username,
-          "deckbox": deckbox,
-      }
-      message_string = json.dumps(message_object)
-      print(f"Received a /dbsub command name: {username} and db: {deckbox}")
-      await cls.send_message_to_queue(
-          command="dbsub",
-          chat_id=update.effective_chat.id,
-          message_text=message_string,
-      )
-
-  @classmethod
-  async def deckbox_unsub_handler(
-      cls,
-      update: Update,
-      context: ContextTypes.DEFAULT_TYPE
-  ) -> None:
-    """Handler that responds to a private message with /dbunsub command and 
-    sends a corresponding message to the "from-user" queue.
-
-    Args:
-      update: telegram-bot parameter
-      context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
-    """
-    if update.effective_chat.type == "private":
-      user = update.message.from_user
-      username = user.username
-      message_text = update.message.text
-      deckbox = message_text.split("/dbunsub ")[1]
-      message_object = {
-          "telegram": username,
-          "deckbox": deckbox,
-      }
-      message_string = json.dumps(message_object)
-      print(f"Received a /dbunsub command. name: {username} and db: {deckbox}")
-      await cls.send_message_to_queue(
-          command="dbunsub",
-          chat_id=update.effective_chat.id,
-          message_text=message_string,
-      )
-
-  @classmethod
   async def deckbox_adding_handler(
       cls,
       update: Update,
       context: ContextTypes.DEFAULT_TYPE
-  ) -> None:
-    """Handler that responds to a private message with /regdbtl command and 
-    sends a corresponding message to the "from-user" queue.
+  ) -> ConversationHandler.END:
+    """Handles user input when adding deckbox account.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
     Returns:
-      A coroutine (?)
+      A conversation handler that stops the conversation with the user
     """
     if update.effective_chat.type == "private":
       user = update.message.from_user
@@ -646,19 +606,15 @@ class MagicBot:
       update: Update,
       context: ContextTypes.DEFAULT_TYPE
   ) -> None:
-    """Handler that responds to a private message with /reg command and sends
-    a corresponding message to the "from-user" queue.
+    """Handles user checking their deckbox.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     if update.effective_chat.type == "private":
       user = update.message.from_user
       username = user.username
-      print(f"Received a /mydeckbox command with username: {username}")
       await cls.send_message_to_queue(
           command="mydeckbox",
           chat_id=update.effective_chat.id,
@@ -671,14 +627,11 @@ class MagicBot:
       update: Update,
       context: ContextTypes.DEFAULT_TYPE
   ) -> None:
-    """Handler that responds to a private message with /dbsub command and sends
-    a corresponding message to the "from-user" queue.
+    """Handler user updating their deckbox.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     if update.effective_chat.type == "private":
       user = update.message.from_user
@@ -695,55 +648,19 @@ class MagicBot:
       update: Update,
       context: ContextTypes.DEFAULT_TYPE
   ) -> None:
-    """Handler that responds to a private message with /reg command and sends
-    a corresponding message to the "from-user" queue.
+    """Handles user checking their current subscriptions list.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     if update.effective_chat.type == "private":
       user = update.message.from_user
       username = user.username
-      print(f"Received a /mydeckbox command with username: {username}")
       await cls.send_message_to_queue(
           command="mydeckboxsubs",
           chat_id=update.effective_chat.id,
           message_text=username,
-      )
-
-  @classmethod
-  async def deckbox_wishlist_adding_handler(
-      cls,
-      update: Update,
-      context: ContextTypes.DEFAULT_TYPE
-  ) -> None:
-    """Handler that responds to a private message with /regdbwl command and 
-    sends a corresponding message to the "from-user" queue.
-
-    Args:
-      update: telegram-bot parameter
-      context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
-    """
-    if update.effective_chat.type == "private":
-      user = update.message.from_user
-      username = user.username
-      message_text = update.message.text
-      deckbox = message_text.split("/regdbwl ")[1]
-      message_object = {
-          "telegram": username,
-          "deckbox": deckbox,
-      }
-      message_string = json.dumps(message_object)
-      print(f"Received a /regdbwl command with username: {username}")
-      await cls.send_message_to_queue(
-          command="regdbwl",
-          chat_id=update.effective_chat.id,
-          message_text=message_string,
       )
 
   @classmethod
@@ -758,8 +675,6 @@ class MagicBot:
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     message_text = update.message.text
     split_message = message_text.split("/ci ")
@@ -779,14 +694,12 @@ class MagicBot:
       update: Update,
       context: ContextTypes.DEFAULT_TYPE
   ) -> None:
-    """Handler that responds to any message with /ci command and sends a 
+    """Handler that responds to any message with /quiz command and sends a 
     corresponding message to the "from-user" queue.
 
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     await cls.send_message_to_queue(
         command="quiz",
@@ -806,15 +719,12 @@ class MagicBot:
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     message_text = update.message.text
     split_message = message_text.split("/c ")
     if len(split_message) < 2:
       return
     card_name = split_message[1]
-    print(f"Received a /c command with text: {card_name}")
     await cls.send_message_to_queue(
         command="c",
         chat_id=update.effective_chat.id,
@@ -833,15 +743,12 @@ class MagicBot:
     Args:
       update: telegram-bot parameter
       context: telegram-bot parameter
-    Returns:
-      A coroutine (?)
     """
     message_text = update.message.text
     split_message = message_text.split("/cp ")
     if len(split_message) < 2:
       return
     card_name = split_message[1]
-    print(f"Received a /cp command with text: {card_name}")
     await cls.send_message_to_queue(
         command="cp",
         chat_id=update.effective_chat.id,

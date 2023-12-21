@@ -1,3 +1,5 @@
+"""A module for handling backend tasks received from from-user-listener.
+"""
 from bot.deckbox.deckbox import Deckbox
 from bot.mongo.mongo_client import MongoClient
 from bot.utils.utils import Utils
@@ -10,7 +12,15 @@ class Backend:
       cls,
       card_name: str,
       chat_id: str
-  ):
+  ) -> bytes:
+    """Sends an error saying the card was not found.
+
+    Args:
+      card_name: name of the card
+      chat_id: Id of the telegram chat to send message to
+    Returns:
+      A dict with message encoded into bytes
+    """
     text = f"Card '{card_name}' not found!"
     return Utils.generate_outgoing_message(
             command="text",
@@ -25,7 +35,18 @@ class Backend:
       account_name: str,
       tradelist: bool = False,
       wishlist: bool = False,
-  ):
+  ) -> bool:
+    """Adds a deckbox list to mongo if it doesn't exist or re-caches it if
+    the cache is older than 12 hours.
+
+    Args:
+      deckbox_id: id o the deckbox to add
+      account_name: account name of the deckbox owner
+      tradelist: set to True when adding a tradelists
+      wishlist: set to True when adding a wishlists
+    Returns:
+      A boolean with operation result
+    """
     # Check if the list already exists in mongo db
     list_exists = await MongoClient.check_if_deckbox_exists(
         deckbox_id=deckbox_id,
@@ -81,6 +102,16 @@ class Backend:
       tradelist: bool = False,
       wishlist: bool = False,
   ):
+    """Updates a deckbox list in mongo.
+
+    Args:
+      deckbox_id: id o the deckbox to update
+      account_name: account name of the deckbox owner
+      tradelist: set to True when adding a tradelists
+      wishlist: set to True when adding a wishlists
+    Returns:
+      A boolean with operation result
+    """
     # Check if the list already exists in mongo db
     list_exists = await MongoClient.check_if_deckbox_exists(
         deckbox_id=deckbox_id,
@@ -147,31 +178,21 @@ class Backend:
   @classmethod
   async def search_for_cards(
       cls,
-      chat_id: str,
       received_cards: list,
       telegram_name: str,
-  ):
-    # Check if the user exists in mongo db
-    user_exists = await MongoClient.check_if_user_exists(
-        telegram_name=telegram_name,
-    )
-    if not user_exists:
-      return Utils.generate_outgoing_message(
-          command="menu",
-          chat_id=chat_id,
-          message_text=f"You need to register first! Use /reg to register.",
-          status=False,
-      )
+  ) -> dict | bytes:
+    """Searches for cards in user subscriptions.
+
+    Args:
+      received_cards: a list of cards to search for
+      telegram_name: name of the user searching
+    Returns:
+      A dict with search results or bytes with error message
+    """
     # Get the user subscriptions
     sub_dict = await MongoClient.get_user_subscriptions(
         telegram=telegram_name,
     )
-    if not sub_dict:
-      return Utils.generate_outgoing_message(
-          command="menu",
-          chat_id=chat_id,
-          message_text=f"You are not subscribed to any deckboxes!",
-      )
     # Get the tradelist ID's of the subscriptions
     sub_list = list(sub_dict.keys())
     deckboxes = await MongoClient.match_deckbox_tradelist_ids_to_names(
@@ -182,19 +203,11 @@ class Backend:
     found_cards_object = {}
     for deckbox_id in trade_lists:
       account = deckboxes.get(deckbox_id)
-      recache_deckbox = await cls.add_deckbox_to_mongo(
+      await cls.add_deckbox_to_mongo(
           deckbox_id=deckbox_id,
           account_name=account,
           tradelist=True,
       )
-      if not recache_deckbox:
-        return Utils.generate_outgoing_message(
-            command="menu",
-            chat_id=chat_id,
-            message_text=(
-                f"Failed to re-cache deckbox {account}. Please try again"
-            ),
-        )
       found_cards_object[deckbox_id] = []
       cards = await MongoClient.get_deckbox_cards_dict(
           deckbox_id=deckbox_id,
@@ -227,31 +240,20 @@ class Backend:
   @classmethod
   async def wish_for_cards(
       cls,
-      chat_id: str,
       received_cards: list,
       telegram_name: str,
-  ):
-    # Check if the user exists in mongo db
-    user_exists = await MongoClient.check_if_user_exists(
-        telegram_name=telegram_name,
-    )
-    if not user_exists:
-      return Utils.generate_outgoing_message(
-          command="menu",
-          chat_id=chat_id,
-          message_text=f"You need to register first! Use /reg to register.",
-          status=False,
-      )
-    # Get the user subscriptions
+  ) -> dict | bytes:
+    """Searches for cards from user wishlist in user subscriptions.
+
+    Args:
+      received_cards: a list of cards to search for
+      telegram_name: name of the user searching
+    Returns:
+      A dict with search results or bytes with error message
+    """
     sub_dict = await MongoClient.get_user_subscriptions(
         telegram=telegram_name,
     )
-    if not sub_dict:
-      return Utils.generate_outgoing_message(
-          command="menu",
-          chat_id=chat_id,
-          message_text=f"You are not subscribed to any deckboxes!",
-      )
     sub_list = list(sub_dict.keys())
     deckboxes = await MongoClient.match_deckbox_tradelist_ids_to_names(
         deckbox_names=sub_list,
@@ -261,19 +263,11 @@ class Backend:
     found_cards_object = {}
     for deckbox_id in trade_lists:
       account = deckboxes.get(deckbox_id)
-      recache_deckbox = await cls.add_deckbox_to_mongo(
+      await cls.add_deckbox_to_mongo(
           deckbox_id=deckbox_id,
           account_name=account,
           tradelist=True,
       )
-      if not recache_deckbox:
-        return Utils.generate_outgoing_message(
-            command="menu",
-            chat_id=chat_id,
-            message_text=(
-                f"Failed to re-cache deckbox {account}. Please try again"
-            ),
-        )
       found_cards_object[deckbox_id] = []
       cards_dict = await MongoClient.get_deckbox_cards_dict(
           deckbox_id=deckbox_id,

@@ -1,6 +1,7 @@
+"""Module for working with Mongo DB.
+"""
 import motor.motor_asyncio
 from bot.config import config
-from bot.deckbox.deckbox import Deckbox
 from bson import ObjectId
 from datetime import datetime
 
@@ -24,8 +25,10 @@ class MongoClient:
     """Fetches a user with a given name from the "users" collection.
 
     Args:
-      telegram_name: telegram username to get
-      discord_name: discord username to get
+      telegram: telegram username to get
+      discord: discord username to get
+      deckbox: deckbox username to get
+      moxfield: moxfield username to get
     Returns:
       A dict with user details or None if user doesn't exist
     """
@@ -76,12 +79,12 @@ class MongoClient:
       cls,
       deckbox_names: list[str],
   ) -> dict | None:
-    """Fetches a deckbox with a given ID.
+    """Creates a dict that has deckbox IDs as keys and account names as values.
 
     Args:
-      deckbox: ID of the deckbox tradelist to get
+      deckbox_names: a list of deckbox account names
     Returns:
-      A dict with list details or None if list doesn't exist
+      A dict matching deckbox IDs to account names
     """
     query = {"account_name": {"$in": deckbox_names}}
     cursor = cls.deckbox_tradelist_colletion.find(query)
@@ -131,8 +134,7 @@ class MongoClient:
       tradelist: bool = False,
       wishlist: bool = False,
   ) -> bool:
-    """Tries to fetch a tradelist with a given deckbox ID from the 
-    "deckbox_tradelists" collection and checks if it exists.
+    """Tries to fetch a deckbox with a given ID and checks if it exists.
 
     Args:
       deckbox_id: tradelist deckbox ID to check
@@ -159,8 +161,7 @@ class MongoClient:
       tradelist: bool = False,
       wishlist: bool = False,
   ) -> bool:
-    """Tries to fetch a tradelist with a given deckbox ID from the 
-    "deckbox_tradelists" collection and checks when it was cached.
+    """Tries to fetch a deckbox with a given ID and checks when it was cached.
 
     Args:
       deckbox: deckbox ID to check
@@ -191,13 +192,13 @@ class MongoClient:
   async def add_user(
       cls,
       object: dict,
-  ):
+  ) -> bool:
     """Adds a new object with the user data to the "users" collection.
 
     Args:
       object: a dictionary with user data to be added
     Returns:
-      A bool with status of the operation
+      A boolean with status of the operation
     """
     result = await cls.users_colletion.insert_one(object)
     if result:
@@ -210,11 +211,11 @@ class MongoClient:
       cls,
       card_name: str,
       message_id: str,
-  ):
-    """Adds a new object with the user data to the "users" collection.
+  ) -> bool:
+    """Adds a new object with the quiz data to the "quiz" collection.
 
     Args:
-      object: a dictionary with user data to be added
+      object: a dictionary with quiz data to be added
     Returns:
       A bool with status of the operation
     """
@@ -232,15 +233,13 @@ class MongoClient:
   async def get_quiz_object(
       cls,
       message_id: str,
-  ) -> str:
-    """Fetches the account name for the chosen deckbox list ID.
+  ) -> dict:
+    """Fetches the quiz data by message ID.
 
     Args:
-      deckbox: id of the deckbox list
-      tradelist: set to True when searching for tradelists
-      wishlist: set to True when searching for wishlists
+      message_id: message ID of the quiz object
     Returns:
-      A string with the username associated with the decklist ID
+      A dict with quiz data
     """
     result = await cls.quiz_collection.find_one(
         {"message_id": message_id}
@@ -254,15 +253,15 @@ class MongoClient:
       tradelist: bool = False,
       wishlist: bool = False,
   ) -> bool:
-    """Adds a new object with the deckbox tradelist data to the 
-    "deckbox_tradelists" collection.
+    """Adds a new object with the deckbox data to the 
+    "deckbox_tradelists" or "deckbox_wishlists" collection.
 
     Args:
       object: a dictionary with deckbox tradelist data to be added
-    Returns:
-      A tuple with a boolean status of the operation and a message
       tradelist: set to True when adding a tradelists
       wishlist: set to True when adding a wishlists
+    Returns:
+      A boolean with the status of the operation
     """
     result = None
     if tradelist:
@@ -281,7 +280,7 @@ class MongoClient:
     Args:
       object: a dictionary with deckbox tradelist data to be added
     Returns:
-      A tuple with a boolean status of the operation and a message
+      A boolean with the status of the operation
     """
     result = None
     result = await cls.edh_danas_collection.insert_one(object)
@@ -291,16 +290,13 @@ class MongoClient:
   async def check_edh_danas(
       cls,
       timestamp: str,
-  ) -> bool:
-    """Tries to fetch a tradelist with a given deckbox ID from the 
-    "deckbox_tradelists" collection and checks when it was cached.
+  ) -> dict | None:
+    """Tries to fetch a edh danas object with a given timestamp.
 
     Args:
-      deckbox: deckbox ID to check
-      tradelist: set to True when checking a tradelist cache
-      wishlist: set to True when checking a wishlist cache
+      timestamp: timestamp to look for in '%Y-%m-%d' format
     Returns:
-      True if the deckbox cache is younger than 12 hours, False if it isn't
+      A dict with edh danas data or None if it doesn't exist
     """
     result = None
     result = await cls.edh_danas_collection.find_one(
@@ -313,15 +309,12 @@ class MongoClient:
       cls,
       timestamp: str,
   ) -> bool:
-    """Tries to fetch a tradelist with a given deckbox ID from the 
-    "deckbox_tradelists" collection and checks when it was cached.
+    """Deletes a edh danas object with a given timestamp
 
     Args:
-      deckbox: deckbox ID to check
-      tradelist: set to True when checking a tradelist cache
-      wishlist: set to True when checking a wishlist cache
+      timestamp: timestamp to look for in '%Y-%m-%d' format
     Returns:
-      True if the deckbox cache is younger than 12 hours, False if it isn't
+      A boolean with status of the operation
     """
     latest_record = await cls.edh_danas_collection.find_one(
         {"timestamp": timestamp}
@@ -342,7 +335,7 @@ class MongoClient:
       tradelist: bool = False,
       wishlist: bool = False,
   ) -> (bool, str):
-    """Updates the deckbox tradelist with new values.
+    """Updates the deckbox with new values.
 
     Args:
       deckbox: ID of the deckbox to update
@@ -407,14 +400,14 @@ class MongoClient:
       tradelist: bool = False,
       wishlist: bool = False,
   ) -> str:
-    """Fetches the account name for the chosen deckbox list ID.
+    """Fetches the deckbox ID for the chosen account name.
 
     Args:
       deckbox_name: name of the deckbox account
       tradelist: set to True when searching for tradelists
       wishlist: set to True when searching for wishlists
     Returns:
-      A string with the username associated with the decklist ID
+      A string with the deckbox ID associated with the deckbox account name
     """
     deckbox_id = ""
     if tradelist:
@@ -436,15 +429,15 @@ class MongoClient:
       telegram_name: str | None = None,
       discord_name: str | None = None,
   ) -> (bool, str):
-    """Updates the "deckbox_tradelist" key in the "users" collection for a
+    """Updates the "deckbox_name" key in the "users" collection for a
     given username.
 
     Args:
-      deckbox: id of the deckbox tradelist
-      telegram_name: telegram username to add tradelist to
-      discord_name: discord username to add tradelist to
+      deckbox: name of the deckbox account
+      telegram_name: telegram username to add deckbox to
+      discord_name: discord username to add deckbox to
     Returns:
-      A tuple witt the status of the transaction and a resulting message
+      A tuple with the status of the transaction and a resulting message
     """
     result = None
     if telegram_name:
@@ -471,7 +464,17 @@ class MongoClient:
       subscription_name: str,
       telegram: str | None = None,
       discord: str | None = None,
-  ):
+  ) -> bool:
+    """Updates the "deckbox_subscriptions" key in the "users" collection for a
+    given username with a new subscription.
+
+    Args:
+      subscription_name: name of the subscription to add
+      telegram: telegram username to add subscription to
+      discord: discord username to add subscription to
+    Returns:
+      A boolean with the status of the operation
+    """
     update_field = f"deckbox_subscriptions.{subscription_name.lower()}"
     result = None
     if telegram:
@@ -492,7 +495,17 @@ class MongoClient:
       subscription_name: str,
       telegram: str | None = None,
       discord: str | None = None,
-  ):
+  ) -> bool:
+    """Updates the "deckbox_subscriptions" key in the "users" collection for a
+    given username by removing an existing subscription.
+
+    Args:
+      subscription_name: name of the subscription to remove
+      telegram: telegram username to remove subscription from
+      discord: discord username to remove subscription from
+    Returns:
+      A boolean with the status of the operation
+    """
     update_field = f"deckbox_subscriptions.{subscription_name.lower()}"
     result = None
     if telegram:
@@ -513,6 +526,14 @@ class MongoClient:
       telegram: str | None = None,
       discord: str | None = None,
   ) -> dict | None:
+    """Fetches a list of user subscriptions.
+
+    Args:
+      telegram: telegram username to get subscriptions
+      discord: discord username to get subscriptions
+    Returns:
+      A dict with subscriptions or None if it doesn't exist
+    """
     user_data = None
     if telegram:
       user_data = await cls.get_user_data(telegram=telegram.lower())
@@ -530,6 +551,15 @@ class MongoClient:
       tradelist: bool = False,
       wishlist: bool = False,
   ) -> dict:
+    """Fetches a list of cards from a chosen deckbox ID.
+
+    Args:
+      deckbox_id: id of the deckbox to get cards from
+      telegram: telegram username to get subscriptions
+      discord: discord username to get subscriptions
+    Returns:
+      A dict with cards or None if it doesn't exist
+    """
     result = None
     card_dict = {}
     if tradelist:

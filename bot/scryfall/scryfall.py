@@ -12,7 +12,7 @@ class ScryfallFetcher:
     Args:
       card_name: name of the card
     Returns:
-      A Response object or None if card doesn't exist
+      A dict with card json data
     """
     url = SCRYFALL_GET_CARD_URL.format(name=card_name)
     response = await HttpClient.HTTP_SESSION.get(url=url)
@@ -26,10 +26,10 @@ class ScryfallFetcher:
 
   @classmethod
   async def get_random_card(cls) -> dict | None:
-    """Fetches random card info from scryfall API by name
+    """Fetches random card info from scryfall API.
 
     Returns:
-      A Response object or None if card doesn't exist
+      A dict with card json data
     """
     url = SCRYFALL_GET_RANDOM_CARD_URL
     response = await HttpClient.HTTP_SESSION.get(url=url)
@@ -43,12 +43,12 @@ class ScryfallFetcher:
 
   @classmethod
   async def get_card_image(cls, card_name: str) -> list[str] | None:
-    """Fetches card info from scryfall API by name
+    """Gets card images for a card with the chosen name.
 
     Args:
       card_name: name of the card
     Returns:
-      A string with the image url or None if card doesn't exist
+      A list of strings with the image urls (empty if card doesn't exist)
     """
     response = await cls.get_card(card_name=card_name)
     results = []
@@ -67,12 +67,10 @@ class ScryfallFetcher:
 
   @classmethod
   async def get_card_image_art(cls) -> dict | None:
-    """Fetches card info from scryfall API by name
+    """Fetches cropped art of a random card from scryfall.
 
-    Args:
-      card_name: name of the card
     Returns:
-      A string with the image url or None if card doesn't exist
+      A dict with card name and art
     """
     response = await cls.get_random_card()
     image_url = None
@@ -88,12 +86,12 @@ class ScryfallFetcher:
 
   @classmethod
   async def get_card_url(cls, card_name: str) -> str | None:
-    """Fetches card info from scryfall API by name
+    """Fetches full card url of a chosen card.
 
     Args:
       card_name: name of the card
     Returns:
-      A string with the image url or None if card doesn't exist
+      A string with the card url or None if card doesn't exist
     """
     response = await cls.get_card(card_name=card_name)
     card_url = None

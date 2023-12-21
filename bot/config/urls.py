@@ -1,3 +1,6 @@
+"""URLS used by other modules.
+"""
+
 SCRYFALL_GET_CARD_URL = "https://api.scryfall.com/cards/named?fuzzy={name}"
 SCRYFALL_GET_RANDOM_CARD_URL = "https://api.scryfall.com/cards/random"
 DECKBOX_TRADELIST_URL = "https://deckbox.org/sets/{deckbox_id}"

@@ -54,6 +54,20 @@ class Deckbox:
     return url
 
   @classmethod
+  async def create_deckbox_user_url(
+      cls,
+      username: str,
+  ) -> str:
+    """Generates a URL for the deckbox user.
+
+    Args:
+      username: name of the user
+    Returns:
+      A string with the URL
+    """
+    return DECKBOX_USER_URL.format(username=username)
+
+  @classmethod
   async def login(cls) -> bool:
     """Logs into the deckbox site and saves the cookie to the config.
 
