@@ -431,7 +431,8 @@ class TelegramCommands:
     """
     message_dict = json.loads(message_text)
     telegram_name = f"@{message_dict.get("telegram", "")}"
-    deckbox = message_dict.get("deckbox")
+    deckbox = message_dict.get("deckbox", "")
+    deckbox_lower = deckbox.lower()
     # Check if the user exists in mongo db
     user_exists = await MongoClient.check_if_user_exists(
         telegram_name=telegram_name,
@@ -442,6 +443,14 @@ class TelegramCommands:
           chat_id=chat_id,
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
+      )
+    # Check if deckbox already belongs to someone else
+    existing_user = await MongoClient.get_user_data(deckbox=deckbox_lower)
+    if existing_user and existing_user.get("telegram") != telegram_name:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"Tradelist {deckbox} belongs to someone else!",
       )
     # Fetch deckbox lists IDs from the site
     ids = await Deckbox.get_deckbox_ids_from_account(account_name=deckbox)
@@ -476,14 +485,6 @@ class TelegramCommands:
           command="menu",
           chat_id=chat_id,
           message_text=f"Failed to add wishlist. Try again.",
-      )
-    # Check if deckbox already belongs to someone else
-    existing_user = await MongoClient.get_user_data(deckbox=deckbox)
-    if existing_user and existing_user.get("telegram") != telegram_name:
-      return Utils.generate_outgoing_message(
-          command="menu",
-          chat_id=chat_id,
-          message_text=f"Tradelist {deckbox} belongs to someone else!",
       )
     (_, fin_msg) = await MongoClient.add_deckbox_to_user(
         deckbox=deckbox,
