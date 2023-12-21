@@ -15,6 +15,9 @@ services:
     image: rabbitmq:3-management
     networks:
       - bot_network
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
     restart: always
 
   telegram:
@@ -29,10 +32,11 @@ services:
   from-user-listener:
     container_name: from-user-listener
     image: from-user-listener:latest
-    depends_on:
-      - rabbitmq
     networks:
       - bot_network
+    depends_on:
+      - rabbitmq
+    restart: always
 
   to-user-listener:
     container_name: to-user-listener
