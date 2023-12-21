@@ -6,8 +6,6 @@ services:
     image: mongo
     networks:
       - bot_network
-    ports:
-      - "27017:27017"
     volumes:
       - mongo_data:/data/db
     restart: always
