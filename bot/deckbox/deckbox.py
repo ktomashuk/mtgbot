@@ -232,11 +232,23 @@ class Deckbox:
         "last_cached": datetime_string,
         "cards": {},
     }
-    for line in data:
-      card_name = line.get("Name").lower()
-      card_count = int(line.get("Count"))
-      if card_name in resulting_object["cards"]:
-        resulting_object["cards"][card_name] += card_count
-      else:
-        resulting_object["cards"][card_name] = card_count
-    return resulting_object
+    # Check if it is a tradelist or a wishlist
+    tradelist = data[0].get("Tradelist Count")
+    if tradelist:
+      for line in data:
+        card_name = line.get("Name").lower()
+        card_count = int(line.get("Tradelist Count"))
+        if card_name in resulting_object["cards"]:
+          resulting_object["cards"][card_name] += card_count
+        else:
+          resulting_object["cards"][card_name] = card_count
+      return resulting_object
+    else:
+      for line in data:
+        card_name = line.get("Name").lower()
+        card_count = int(line.get("Count"))
+        if card_name in resulting_object["cards"]:
+          resulting_object["cards"][card_name] += card_count
+        else:
+          resulting_object["cards"][card_name] = card_count
+      return resulting_object
