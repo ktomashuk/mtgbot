@@ -18,6 +18,8 @@ TO_USER_QUEUE_NAME = os.getenv("TO_USER_QUEUE_NAME")
 # Telegram bot token
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+# Discrod bot token
+DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 # AIO Pika
 AIO_PIKA_PARAMETERS = {
     "url": f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/",

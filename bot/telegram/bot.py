@@ -114,7 +114,7 @@ class MagicBot:
         keyboard,
         resize_keyboard=True,
     )
-    if len(message) > 3500:
+    if len(message) > 3900:
       message = "Please be more specific."
     await cls.bot.send_message(
         chat_id=chat_id,

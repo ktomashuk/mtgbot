@@ -111,11 +111,11 @@ class Utils:
           )
           card_message = f"<a href='{card_url}'>{name}</a>: {count}\n"
           deckbox_message += card_message
-          if len(deckbox_message) > 2000:
+          if len(deckbox_message) > 1800:
             messages.append(deckbox_message)
             deckbox_message = ""
         result_message += deckbox_message
-        if len(result_message) > 2000:
+        if len(result_message) > 1800:
           messages.append(result_message)
           result_message = ""
     if result_message:
