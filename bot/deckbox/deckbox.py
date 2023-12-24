@@ -233,7 +233,11 @@ class Deckbox:
         "cards": {},
     }
     # Check if it is a tradelist or a wishlist
-    tradelist = data[0].get("Tradelist Count")
+    tradelist = None
+    if data:
+      tradelist = data[0].get("Tradelist Count")
+    else:
+      return resulting_object
     if tradelist:
       for line in data:
         card_name = line.get("Name").lower()
