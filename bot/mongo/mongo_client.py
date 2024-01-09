@@ -13,6 +13,12 @@ class MongoClient:
   deckbox_wishlist_collection = db.deckbox_wishlists
   edh_danas_collection = db.edh_danas
   quiz_collection = db.quiz
+  status_collection = db.status
+  stores_collection = db.stores
+  league_collection = db.league
+  league_invite_collection = db.league_invites
+  league_players_collection = db.league_players
+  league_matches_collection = db.league_matches
 
   @classmethod
   async def get_user_data(
@@ -186,7 +192,7 @@ class MongoClient:
     now = datetime.now()
     time_difference = now - converted_date
     minutes_passed = round(time_difference.total_seconds() / 60, 2)
-    return minutes_passed < 720
+    return minutes_passed < 1500
 
   @classmethod
   async def add_user(
@@ -423,6 +429,56 @@ class MongoClient:
     return deckbox_id
 
   @classmethod
+  async def get_deckbox_subscribers(
+      cls,
+      account_name: str,
+  ) -> list[dict]:
+    """Fetches all user objects of users subscribed to a certain deckbox.
+
+    Args:
+      account_name: name of the deckbox account
+    Returns:
+      A list of user objects
+    """
+    query = {f"deckbox_subscriptions.{account_name}": {"$exists": True}}
+    cursor = cls.users_colletion.find(query)
+    result_list = []
+    async for user in cursor:
+        result_list.append(user)
+    return result_list
+
+  @classmethod
+  async def get_all_deckboxes(
+      cls,
+      tradelist: bool = False,
+      wishlist: bool = False,
+  ) -> dict:
+    """Fetches all the deckboxes present in the DB.
+
+    Args:
+      tradelist: set to True when searching for tradelists
+      wishlist: set to True when searching for wishlists
+    Returns:
+      A dict with deckbox IDs as keys and their account names as values
+    """
+    result_dict = {}
+    if tradelist:
+      cursor = cls.deckbox_tradelist_colletion.find({})
+      async for document in cursor:
+        deckbox_id = document.get("deckbox_id", "")
+        account_name = document.get("account_name", "")
+        if deckbox_id and account_name:
+          result_dict[deckbox_id] = account_name
+    if wishlist:
+      cursor = cls.deckbox_wishlist_collection.find({})
+      async for document in cursor:
+        deckbox_id = document.get("deckbox_id", "")
+        account_name = document.get("account_name", "")
+        if deckbox_id and account_name:
+          result_dict[deckbox_id] = account_name
+    return result_dict
+
+  @classmethod
   async def add_deckbox_to_user(
       cls,
       deckbox: str,
@@ -457,6 +513,38 @@ class MongoClient:
         return (True, f"Deckbox {deckbox.lower()} added successfully.")
       else:
         return (False, "That deckbox is already yours.")
+
+  @classmethod
+  async def add_chat_id_to_user(
+      cls,
+      chat_id: str,
+      telegram_name: str | None = None,
+      discord_name: str | None = None,
+  ) -> bool:
+    """Adds the "chat_id" to the user in the DB.
+
+    Args:
+      chat_ud: user's telegram chat ID
+      telegram_name: telegram username to add chat id to
+      discord_name: discord username to add chat id to
+    Returns:
+      A status of the transaction
+    """
+    result = None
+    if telegram_name:
+      result = await cls.users_colletion.update_one(
+          {"telegram": telegram_name.lower()},
+          {"$set": {"chat_id": chat_id}}
+      )
+    elif discord_name:
+      result = await cls.users_colletion.update_one(
+          {"discord": discord_name.lower()},
+          {"$set": {"chat_id": chat_id}}
+      )
+    if not result:
+      return False
+    else:
+      return result.modified_count > 0
 
   @classmethod
   async def add_subscription_to_user(
@@ -573,3 +661,187 @@ class MongoClient:
       )
       card_dict = result.get("cards", {})
     return card_dict
+
+  @classmethod
+  async def add_status(
+      cls,
+      object: dict,
+  ) -> bool:
+    """Adds a new object with the user data to the "status" collection.
+
+    Args:
+      object: a dictionary with status data to be added
+    Returns:
+      A boolean with status of the operation
+    """
+    result = await cls.status_collection.insert_one(object)
+    if result:
+      return result.acknowledged
+    else:
+      return False
+
+  @classmethod
+  async def add_store(
+      cls,
+      object: dict,
+  ) -> bool:
+    """Adds a new object with the user data to the "stores" collection.
+
+    Args:
+      object: a dictionary with store data to be added
+    Returns:
+      A boolean with status of the operation
+    """
+    result = await cls.stores_collection.insert_one(object)
+    if result:
+      return result.acknowledged
+    else:
+      return False
+
+  @classmethod
+  async def check_if_store_exists(
+      cls,
+      store_name: str,
+  ) -> bool:
+    """Tries to fetch a store with a given name from the "stores" collection and
+    checks if the store exists.
+
+    Args:
+      store_name: store name to check
+    Returns:
+      True if the user exists, False if they don't
+    """
+    store = None
+    store = await cls.stores_collection.find_one(
+        {"name": store_name.lower()}
+    )
+    return store is not None
+
+  @classmethod
+  async def update_store(
+      cls,
+      store_name: str,
+      cards: dict,
+  ) -> bool:
+    """Updates the store with new cards.
+
+    Args:
+      store_name: name of the store to update
+      cards: a dictionary with cards data to be added
+    Returns:
+      A tuple with a boolean status of the operation and a message
+    """
+    result = await cls.stores_collection.update_one(
+        {"name": store_name.lower()},
+        {"$set": {"cards": cards}}
+    )
+    if not result:
+      return False
+    else:
+      return True
+
+  @classmethod
+  async def add_store_subscription_to_user(
+      cls,
+      subscription_name: str,
+      telegram: str | None = None,
+      discord: str | None = None,
+  ) -> bool:
+    """Updates the "store_subscriptions" key in the "users" collection for a
+    given username with a new subscription.
+
+    Args:
+      subscription_name: name of the subscription to add
+      telegram: telegram username to add subscription to
+      discord: discord username to add subscription to
+    Returns:
+      A boolean with the status of the operation
+    """
+    update_field = f"store_subscriptions.{subscription_name.lower()}"
+    result = None
+    if telegram:
+      result = await cls.users_colletion.update_one(
+          {"telegram": telegram.lower()},
+          {"$set": {update_field: False}}
+      )
+    if discord:
+      result = await cls.users_colletion.update_one(
+          {"discord": discord.lower()},
+          {"$set": {update_field: False}}
+      )
+    return result
+
+  @classmethod
+  async def remove_store_subscription_from_user(
+      cls,
+      subscription_name: str,
+      telegram: str | None = None,
+      discord: str | None = None,
+  ) -> bool:
+    """Updates the "store_subscriptions" key in the "users" collection for a
+    given username by removing an existing subscription.
+
+    Args:
+      subscription_name: name of the subscription to remove
+      telegram: telegram username to remove subscription from
+      discord: discord username to remove subscription from
+    Returns:
+      A boolean with the status of the operation
+    """
+    update_field = f"store_subscriptions.{subscription_name.lower()}"
+    result = None
+    if telegram:
+      result = await cls.users_colletion.update_one(
+          {"telegram": telegram.lower()},
+          {"$unset": {update_field: False}}
+      )
+    if discord:
+      result = await cls.users_colletion.update_one(
+          {"discord": discord.lower()},
+          {"$unset": {update_field: False}}
+      )
+    return result
+
+  @classmethod
+  async def get_store_cards_dict(
+      cls,
+      store_name: str,
+  ) -> dict:
+    """Fetches a list of cards from a chosen store.
+
+    Args:
+      store_name: name of the store to get cards from
+    Returns:
+      A dict with cards or None if it doesn't exist
+    """
+    result = None
+    card_dict = {}
+    result = await cls.stores_collection.find_one(
+      {"name": store_name.lower()}
+    )
+    card_dict = result.get("cards", {})
+    return card_dict
+
+  @classmethod
+  async def get_user_store_subscriptions(
+      cls,
+      telegram: str | None = None,
+      discord: str | None = None,
+  ) -> dict | None:
+    """Fetches a list of user store subscriptions.
+
+    Args:
+      telegram: telegram username to get subscriptions
+      discord: discord username to get subscriptions
+    Returns:
+      A dict with subscriptions or None if it doesn't exist
+    """
+    user_data = None
+    if telegram:
+      user_data = await cls.get_user_data(telegram=telegram.lower())
+    if discord:
+      user_data = await cls.get_user_data(discord=discord.lower())
+    if user_data:
+      subscriptions = user_data.get("store_subscriptions")
+      return subscriptions
+    return None

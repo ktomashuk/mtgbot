@@ -18,3 +18,6 @@ DECKBOX_USER_URL = "https://deckbox.org/users/{username}"
 MYTHICCARD_CARD_URL = (
   "https://mythiccard.com/index.php?route=product/search&search={card_name}&fq=1"
 )
+MYTHICCARD_ALL_CARDS_URL = (
+  "https://mythiccard.com/index.php?route=product/category&path=66&limit=100&fq=1&page={page}"
+)

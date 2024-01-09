@@ -4,6 +4,8 @@ from bot.deckbox.deckbox import Deckbox
 from bot.mongo.mongo_client import MongoClient
 from bot.utils.utils import Utils
 from bot.deckbox.deckbox import Deckbox
+from bot.mythiccard.mythiccard import MythicCard
+from bot.telegram.bot import MagicBot
 
 class Backend:
 
@@ -147,6 +149,54 @@ class Backend:
           deckbox=deckbox_id,
           account_name=name,
       )
+      new_cards = new_cache.get("cards")
+      # Get the difference between the old and the new cache
+      old_cards = await MongoClient.get_deckbox_cards_dict(
+          deckbox_id=deckbox_id,
+          tradelist=tradelist,
+          wishlist=wishlist,
+      )
+      diff_dict = {}
+      if tradelist:
+        diff_dict = {
+          key: value for key, value in new_cards.items() if key not in old_cards
+        }
+      if diff_dict:
+        # Check who is subscribed to this deckbox
+        subscribed = await MongoClient.get_deckbox_subscribers(
+            account_name=name
+        )
+        # Loop through subscribers and check if they have diff cards in wishlist
+        for subscriber in subscribed:
+          subscriber_name = subscriber.get("deckbox_name")
+          user_wishlist_id = await MongoClient.get_deckbox_id(
+              deckbox_name=subscriber_name,
+              wishlist=True,
+          )
+          user_wishlist_cards = await MongoClient.get_deckbox_cards_dict(
+              deckbox_id=user_wishlist_id,
+              wishlist=True,
+          )
+          found_cards = {}
+          for card in diff_dict.keys():
+            if card in user_wishlist_cards:
+              found_cards[card] = diff_dict.get(card)
+          if found_cards:
+            # Check if the user has a chat id
+            subscriber_chat_id = subscriber.get("chat_id")
+            if subscriber_chat_id:
+              # Construct a message with cards
+              messages = await Utils.construct_subscription_message(
+                  found_object=found_cards,
+                  deckbox_name=name,
+                  deckbox_id=deckbox_id,
+              )
+              for message in messages:
+                await MagicBot.send_message_to_queue(
+                    command="sendmsg",
+                    chat_id=subscriber_chat_id,
+                    message_text=message,
+                )
       (new_status, _) = await MongoClient.update_deckbox(
           deckbox=deckbox_id,
           object=new_cache,
@@ -199,21 +249,28 @@ class Backend:
       cls,
       received_cards: list,
       telegram_name: str,
+      received_deckboxes: list[str] | None = None,
   ) -> dict | bytes:
     """Searches for cards in user subscriptions.
 
     Args:
       received_cards: a list of cards to search for
       telegram_name: name of the user searching
+      received_deckboxes: names of dekboxes, fetches subscriptions if None
     Returns:
       A dict with search results or bytes with error message
     """
-    # Get the user subscriptions
-    sub_dict = await MongoClient.get_user_subscriptions(
-        telegram=telegram_name,
-    )
-    # Get the tradelist ID's of the subscriptions
-    sub_list = list(sub_dict.keys())
+    sub_list = []
+    if received_deckboxes:
+      lower_dbs = [name.lower() for name in received_deckboxes]
+      sub_list = lower_dbs
+    else:
+      # Get the user subscriptions
+      sub_dict = await MongoClient.get_user_subscriptions(
+          telegram=telegram_name,
+      )
+      # Get the tradelist ID's of the subscriptions
+      sub_list = list(sub_dict.keys())
     deckboxes = await MongoClient.match_deckbox_tradelist_ids_to_names(
         deckbox_names=sub_list,
     )
@@ -261,19 +318,28 @@ class Backend:
       cls,
       received_cards: list,
       telegram_name: str,
+      received_deckboxes: list[str] | None = None,
   ) -> dict | bytes:
     """Searches for cards from user wishlist in user subscriptions.
 
     Args:
       received_cards: a list of cards to search for
       telegram_name: name of the user searching
+      received_deckboxes: names of dekboxes, fetches subscriptions if None
     Returns:
       A dict with search results or bytes with error message
     """
-    sub_dict = await MongoClient.get_user_subscriptions(
-        telegram=telegram_name,
-    )
-    sub_list = list(sub_dict.keys())
+    sub_list = []
+    if received_deckboxes:
+      lower_dbs = [name.lower() for name in received_deckboxes]
+      sub_list = lower_dbs
+    else:
+      # Get the user subscriptions
+      sub_dict = await MongoClient.get_user_subscriptions(
+          telegram=telegram_name,
+      )
+      # Get the tradelist ID's of the subscriptions
+      sub_list = list(sub_dict.keys())
     deckboxes = await MongoClient.match_deckbox_tradelist_ids_to_names(
         deckbox_names=sub_list,
     )
@@ -301,3 +367,99 @@ class Backend:
               (lower_card, cards_dict[lower_card])
           )
     return found_cards_object
+
+  @classmethod
+  async def wish_for_cards_in_conflux(
+      cls,
+      received_cards: list,
+  ) -> dict | bytes:
+    """Searches for cards from user wishlist in conflux.
+
+    Args:
+      received_cards: a list of cards to search for
+    Returns:
+      A dict with search results or bytes with error message
+    """
+    cards = await MongoClient.get_store_cards_dict(store_name="conflux")
+    # Find cards in tradelists
+    found_cards_object = {}
+    # Check every card the user entered
+    for card in received_cards:
+      lower_card = card.lower()
+      found = cards.get(lower_card)
+      if found:
+        found_cards_object[card] = cards.get(card)
+    return found_cards_object
+
+  @classmethod
+  async def search_for_cards_in_conflux(
+      cls,
+      received_cards: list,
+  ) -> dict | bytes:
+    """Searches for cards in conflux store.
+
+    Args:
+      received_cards: a list of cards to search for
+    Returns:
+      A dict with search results or bytes with error message
+    """
+    cards = await MongoClient.get_store_cards_dict(store_name="conflux")
+    cards_list = sorted(list(cards.keys()))
+    found_cards_object = {}
+    # Check every card the user entered
+    for card in received_cards:
+      lower_card = card.lower()
+      first_letter = lower_card[0]
+      first_index = await Utils.find_letter_index(
+          input_list=cards_list,
+          letter=first_letter,
+      )
+      # If the letter exists in the list start looking for cards
+      if first_index is not None:
+        cut_list = cards_list[first_index:]
+        find = await cls.look_for_card_in_list(
+            card_name=lower_card,
+            card_list=cut_list,
+        )
+        # If cards were found add them to the dict to generate a message
+        if find:
+          for found_card in find:
+            found_cards_object[found_card] = cards.get(found_card)
+    return found_cards_object
+
+  @classmethod
+  async def conflux_cache_scheduled_job(cls) -> None:
+    """Caches the conflux store to the DB.
+    """
+    conflux_cache = await MythicCard.get_all_cards()
+    add_cache = await MongoClient.update_store(
+        store_name="conflux",
+        cards=conflux_cache,
+    )
+    print(f"Conflux cache success: {add_cache}")
+
+  @classmethod
+  async def deckboxes_cache_scheduled_job(cls) -> None:
+    """Caches the conflux store to the DB.
+    """
+    print("Starting the re-caching of deckboxes")
+    all_tradelists = await MongoClient.get_all_deckboxes(tradelist=True)
+    all_wishlists = await MongoClient.get_all_deckboxes(wishlist=True)
+    # Re-cache all wishlists
+    for wishlist in all_wishlists.keys():
+      account = all_wishlists.get(wishlist)
+      result = await cls.update_deckbox_cache_in_mongo(
+          deckbox_id=wishlist,
+          account_name=account,
+          wishlist=True,
+      )
+      print(f"Wishlist {account} ({wishlist}) cached: {result}")
+    # Re-cache all tradelists
+    for tradelist in all_tradelists.keys():
+      account = all_tradelists.get(tradelist)
+      result = await cls.update_deckbox_cache_in_mongo(
+          deckbox_id=tradelist,
+          account_name=account,
+          tradelist=True,
+      )
+      print(f"Tradelist {account} ({tradelist}) cached: {result}")

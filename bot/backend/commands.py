@@ -12,6 +12,26 @@ from datetime import datetime
 class TelegramCommands:
 
   @classmethod
+  async def send_freeform_message(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Sends a freeform message to chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with card name
+    Returns:
+      A dict with message encoded into bytes
+    """
+    return Utils.generate_outgoing_message(
+        command="text",
+        chat_id=chat_id,
+        message_text=message_text,
+    )
+
+  @classmethod
   async def show_full_card_url(
       cls,
       chat_id: str,
@@ -194,19 +214,70 @@ class TelegramCommands:
         "/edhdanas - create a EDH danas poll or forward it if it exists\n"
         "<b>Account commands:</b>\n"
         "/reg - register you telegram account\n"
-        "<b>Deckbox commands:</b>\n"
-        "/search - search for cards in deckboxes you're subscribed to\n"
+        "<b>Search commands:</b>\n"
+        "/search - search in deckboxes & stores you're subscribed to\n"
         "/wish - search for cards from your deckbox wishlist"
-        " in deckboxes you're subscribed to\n"
-        "/regdeckbox - register you deckbox\n"
-        "/updatedeckbox - updates you deckbox cache to be up-to-date\n"
-        "/dbsub subscribe to deckboxes\n"
-        "/dbunsub - unsubscribe from deckboxes\n"
-        "/mydeckbox - check your registered deckbox\n"
-        "/mydeckboxsubs - show your current deckbox tradelist subscriptions\n"
+        " in deckboxes & stores you're subscribed to\n"
+        "<b>Menu commands:</b>\n"
+        "/deckbox - opens a menu for manipulating your deckbox settings\n"
+        "/conflux - opens a menu for manipulating your conflux settings\n"
     )
     return Utils.generate_outgoing_message(
         command="menu",
+        chat_id=chat_id,
+        message_text=text,
+    )
+
+  @classmethod
+  async def show_deckbox_help(
+      cls,
+      chat_id: str,
+  ) -> bytes:
+    """Sends a message with help info to the user.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+    Returns:
+      A dict with message encoded into bytes
+    """
+    text = (
+        "/dbsearch - search for cards in specific deckboxes\n"
+        "/dbwish - search for cards from your wishlist in specific deckboxes\n"
+        "/regdeckbox - register you deckbox\n"
+        "/updatedeckbox - updates you deckbox cache to be up-to-date\n"
+        "/dbsub - subscribe to deckboxes\n"
+        "/dbunsub - unsubscribe from deckboxes\n"
+        "/mydeckbox - check your registered deckbox\n"
+        "/mydeckboxsubs - show your current deckbox subscriptions\n"
+        "/main - go back to the main menu\n"
+    )
+    return Utils.generate_outgoing_message(
+        command="deckboxmenu",
+        chat_id=chat_id,
+        message_text=text,
+    )
+
+  @classmethod
+  async def show_conflux_help(
+      cls,
+      chat_id: str,
+  ) -> bytes:
+    """Sends a message with conflux help info to the user.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+    Returns:
+      A dict with message encoded into bytes
+    """
+    text = (
+        "/consearch - search for cards in conflux\n"
+        "/conwish - search for cards from your deckbox wishlist in confux\n"
+        "/confluxsub - subscribe to see conflux in your regular searches\n"
+        "/confluxunsub - unsubscribe from conflux in your regular searches\n"
+        "/main - go back to the main menu\n"
+    )
+    return Utils.generate_outgoing_message(
+        command="confluxmenu",
         chat_id=chat_id,
         message_text=text,
     )
@@ -331,10 +402,86 @@ class TelegramCommands:
     full_name = f"@{message_text}"
     text = "You need to register first! Use command /reg"
     exists = await MongoClient.check_if_user_exists(telegram_name=full_name)
+    # Check if user has chat ID assigned to them
+    user_data = await MongoClient.get_user_data(
+        telegram=full_name,
+    )
+    user_chat_id = user_data.get("chat_id")
+    if not user_chat_id:
+      update = await MongoClient.add_chat_id_to_user(
+          chat_id=chat_id,
+          telegram_name=full_name
+      )
+      if not update:
+        print(f"Failed to add chat_id {chat_id} of user {full_name} to the DB")
     if exists:
       text = "Choose a command"
     return Utils.generate_outgoing_message(
         command="menu",
+        chat_id=chat_id,
+        message_text=text,
+        options={"registered": exists},
+    )
+
+  @classmethod
+  async def get_deckbox_menu(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Sends a decbkox menu to the chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
+    if not message_text or message_text == "":
+      return Utils.generate_outgoing_message(
+          command="text",
+          chat_id=chat_id,
+          message_text=f"You need to have a telegram username!",
+      )
+    full_name = f"@{message_text}"
+    text = "You need to register first! Use command /reg"
+    exists = await MongoClient.check_if_user_exists(telegram_name=full_name)
+    if exists:
+      text = "Choose a command"
+    return Utils.generate_outgoing_message(
+        command="deckboxmenu",
+        chat_id=chat_id,
+        message_text=text,
+        options={"registered": exists},
+    )
+
+  @classmethod
+  async def get_conflux_menu(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Sends a conflux menu to the chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
+    if not message_text or message_text == "":
+      return Utils.generate_outgoing_message(
+          command="text",
+          chat_id=chat_id,
+          message_text=f"You need to have a telegram username!",
+      )
+    full_name = f"@{message_text}"
+    text = "You need to register first! Use command /reg"
+    exists = await MongoClient.check_if_user_exists(telegram_name=full_name)
+    if exists:
+      text = "Choose a command"
+    return Utils.generate_outgoing_message(
+        command="confluxmenu",
         chat_id=chat_id,
         message_text=text,
         options={"registered": exists},
@@ -361,7 +508,7 @@ class TelegramCommands:
     )
     if not user_exists:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
@@ -371,7 +518,7 @@ class TelegramCommands:
     username = user_data.get("deckbox_name")
     if not username:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"You don't have a registered deckbox yet.",
       )
@@ -379,7 +526,7 @@ class TelegramCommands:
     ids = await Deckbox.get_deckbox_ids_from_account(account_name=username)
     if not ids.get("success"):
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"It appears the deckbox {username} doesn't exist",
       )
@@ -393,7 +540,7 @@ class TelegramCommands:
     )
     if not tradelist_result:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"Failed to add tradelist. Try again.",
       )
@@ -405,12 +552,12 @@ class TelegramCommands:
     )
     if not wishlist_result:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"Failed to add wishlist. Try again.",
       )
     return Utils.generate_outgoing_message(
-        command="menu",
+        command="deckboxmenu",
         chat_id=chat_id,
         message_text="Your deckbox was updated.",
     )
@@ -439,7 +586,7 @@ class TelegramCommands:
     )
     if not user_exists:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
@@ -448,7 +595,7 @@ class TelegramCommands:
     existing_user = await MongoClient.get_user_data(deckbox=deckbox_lower)
     if existing_user and existing_user.get("telegram") != telegram_name:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"Tradelist {deckbox} belongs to someone else!",
       )
@@ -456,7 +603,7 @@ class TelegramCommands:
     ids = await Deckbox.get_deckbox_ids_from_account(account_name=deckbox)
     if not ids.get("success"):
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"It appears the deckbox {deckbox} doesn't exist",
       )
@@ -470,7 +617,7 @@ class TelegramCommands:
     )
     if not tradelist_result:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"Failed to add tradelist. Try again.",
       )
@@ -482,7 +629,7 @@ class TelegramCommands:
     )
     if not wishlist_result:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"Failed to add wishlist. Try again.",
       )
@@ -491,7 +638,7 @@ class TelegramCommands:
         telegram_name=telegram_name,
     )
     return Utils.generate_outgoing_message(
-        command="menu",
+        command="deckboxmenu",
         chat_id=chat_id,
         message_text=fin_msg,
     )
@@ -519,7 +666,7 @@ class TelegramCommands:
     )
     if not user_exists:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
@@ -528,7 +675,7 @@ class TelegramCommands:
     ids = await Deckbox.get_deckbox_ids_from_account(account_name=deckbox)
     if not ids.get("success"):
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"It appears the deckbox {deckbox} doesn't exist",
       )
@@ -542,7 +689,7 @@ class TelegramCommands:
     )
     if not tradelist_result:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"Failed to add tradelist. Try again.",
       )
@@ -554,7 +701,7 @@ class TelegramCommands:
     )
     if not wishlist_result:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"Failed to add wishlist. Try again.",
       )
@@ -564,12 +711,12 @@ class TelegramCommands:
     )
     if not result:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"Failed to subscribe to {deckbox}",
       )
     return Utils.generate_outgoing_message(
-        command="menu",
+        command="deckboxmenu",
         chat_id=chat_id,
         message_text=f"You subscribed to {deckbox}",
     )
@@ -597,7 +744,7 @@ class TelegramCommands:
     )
     if not user_exists:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
@@ -608,12 +755,12 @@ class TelegramCommands:
     )
     if not result:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"Failed to unsubscribe from {deckbox}",
       )
     return Utils.generate_outgoing_message(
-        command="menu",
+        command="deckboxmenu",
         chat_id=chat_id,
         message_text=f"You unsubscribed from {deckbox}",
     )
@@ -644,7 +791,7 @@ class TelegramCommands:
     )
     if not user_exists:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
@@ -655,15 +802,15 @@ class TelegramCommands:
     current_deckbox = current_user_data.get("deckbox_name")
     if current_deckbox == "":
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"You haven't registered a deckbox yet!",
       )
     else:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
-          message_text=f"Your deckbox tradelist is: {current_deckbox}",
+          message_text=f"Your deckbox account name is: {current_deckbox}",
       )
 
   @classmethod
@@ -692,7 +839,7 @@ class TelegramCommands:
     )
     if not user_exists:
       return Utils.generate_outgoing_message(
-          command="menu",
+          command="deckboxmenu",
           chat_id=chat_id,
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
@@ -702,11 +849,11 @@ class TelegramCommands:
     )
     final_string = "You are not subscribed to any deckboxes yet"
     if subscriptions:
-        final_string = "You are subscribed to:\n"
+        final_string = ""
         for sub in subscriptions.keys():
           final_string += f"{sub}\n"
     return Utils.generate_outgoing_message(
-        command="menu",
+        command="deckboxmenu",
         chat_id=chat_id,
         message_text=final_string,
     )
@@ -788,6 +935,163 @@ class TelegramCommands:
     return results
 
   @classmethod
+  async def deckboxes_search_cards(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Searches for cards in selected deckboxes.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with dict containing user name and cards to search for
+    Returns:
+      A dict with message encoded into bytes
+    """
+    message_dict = json.loads(message_text)
+    telegram_name = f"@{message_dict.get("telegram", "")}"
+    received_cards = message_dict.get("cards")
+    received_deckboxes = message_dict.get("deckboxes")
+    # Check if the user exists in mongo db
+    user_exists = await MongoClient.check_if_user_exists(
+        telegram_name=telegram_name,
+    )
+    if not user_exists:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"You need to register first! Use /reg to register.",
+          options={"registered": False},
+      )
+    # Check if some of the requested deckboxes don't exist and add them
+    all_dbs = await MongoClient.get_all_deckboxes(tradelist=True)
+    for deckbox in received_deckboxes:
+      if deckbox not in all_dbs:
+        # Add a deckbox to mongo if it didn't exist
+        ids = await Deckbox.get_deckbox_ids_from_account(account_name=deckbox)
+        if not ids.get("success"):
+          return Utils.generate_outgoing_message(
+              command="deckboxmenu",
+              chat_id=chat_id,
+              message_text=f"It appears the deckbox {deckbox} doesn't exist",
+          )
+        tradelist_id = ids.get("tradelist")
+        wishlist_id = ids.get("wishlist")
+        # Add tradelist
+        tradelist_result = await Backend.add_deckbox_to_mongo(
+            deckbox_id=tradelist_id,
+            account_name=deckbox,
+            tradelist=True,
+        )
+        if not tradelist_result:
+          return Utils.generate_outgoing_message(
+              command="deckboxmenu",
+              chat_id=chat_id,
+              message_text=f"Failed to add tradelist. Try again.",
+          )
+        # Add wishlist
+        wishlist_result = await Backend.add_deckbox_to_mongo(
+            deckbox_id=wishlist_id,
+            account_name=deckbox,
+            wishlist=True,
+        )
+        if not wishlist_result:
+          return Utils.generate_outgoing_message(
+              command="deckboxmenu",
+              chat_id=chat_id,
+              message_text=f"Failed to add wishlist. Try again.",
+          )
+    all_dicts = []
+    if len(received_cards) > 10:
+      cards_chunks = await Utils.split_list_into_chunks(
+          input_list=received_cards,
+          max_length=10,
+      )
+      for chunk in cards_chunks:
+        chunk_result = await Backend.search_for_cards(
+            received_cards=chunk,
+            telegram_name=telegram_name,
+            received_deckboxes=received_deckboxes,
+        )
+        all_dicts.append(chunk_result)
+    else:
+      search_result = await Backend.search_for_cards(
+          received_cards=received_cards,
+          telegram_name=telegram_name,
+          received_deckboxes=received_deckboxes,
+        )
+      all_dicts.append(search_result)
+    result = await Utils.construct_united_search_dict(input_dicts=all_dicts)
+    deckboxes = await MongoClient.get_all_deckboxes(tradelist=True)
+    messages = await Utils.construct_found_message(
+        found_object=result,
+        deckbox_names=deckboxes,
+    )
+    results = []
+    for message in messages:
+      part = Utils.generate_outgoing_message(
+        command="deckboxmenu",
+        chat_id=chat_id,
+        message_text=message,
+      )
+      results.append(part)
+    return results
+
+  @classmethod
+  async def conflux_search_cards(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Searches for cards in conflux.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with dict containing user name and cards to search for
+    Returns:
+      A dict with message encoded into bytes
+    """
+    message_dict = json.loads(message_text)
+    telegram_name = f"@{message_dict.get("telegram", "")}"
+    received_cards = message_dict.get("cards")
+    search_type = message_dict.get("search")
+    # Check if the user exists in mongo db
+    user_exists = await MongoClient.check_if_user_exists(
+        telegram_name=telegram_name,
+    )
+    if not user_exists:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"You need to register first! Use /reg to register.",
+          options={"registered": False},
+      )
+    search_result = await Backend.search_for_cards_in_conflux(
+        received_cards=received_cards,
+    )
+    messages = await Utils.construct_found_store_message(
+        found_object=search_result,
+        store_name="Conflux",
+    )
+    results = []
+    command = "menu"
+    match search_type:
+      case "all":
+        command = "menu"
+      case "conflux":
+        command = "confluxmenu"
+      case _:
+        command = "menu"
+    for message in messages:
+      part = Utils.generate_outgoing_message(
+        command=command,
+        chat_id=chat_id,
+        message_text=message,
+      )
+      results.append(part)
+    return results
+
+  @classmethod
   async def search_cards_from_wishlist(
       cls,
       chat_id: str,
@@ -801,7 +1105,9 @@ class TelegramCommands:
     Returns:
       A dict with message encoded into bytes
     """
-    telegram_name = f"@{message_text}"
+    message_dict = json.loads(message_text)
+    telegram_name = f"@{message_dict.get("telegram", "")}"
+    search_type = message_dict.get("search")
     # Check if the user exists in mongo db
     user_exists = await MongoClient.check_if_user_exists(
         telegram_name=telegram_name,
@@ -864,14 +1170,354 @@ class TelegramCommands:
         deckbox_names=deckboxes,
     )
     final_message_results = []
+    command = "menu"
+    match search_type:
+      case "all":
+        command = "menu"
+      case "conflux":
+        command = "confluxmenu"
+      case _:
+        command = "menu"
     for message in messages:
       part = Utils.generate_outgoing_message(
-        command="menu",
+        command=command,
         chat_id=chat_id,
         message_text=message,
       )
       final_message_results.append(part)
     return final_message_results
+
+  @classmethod
+  async def deckboxes_search_cards_from_wishlist(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Searches for cards from user wishlist in user subscriptions.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
+    message_dict = json.loads(message_text)
+    telegram_name = f"@{message_dict.get("telegram", "")}"
+    search_type = message_dict.get("search")
+    received_deckboxes = message_dict.get("deckboxes")
+    # Check if the user exists in mongo db
+    user_exists = await MongoClient.check_if_user_exists(
+        telegram_name=telegram_name,
+    )
+    if not user_exists:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"You need to register first! Use /reg to register.",
+          options={"registered": False},
+      )
+    # Find user's wishlist
+    user_data = await MongoClient.get_user_data(telegram=telegram_name)
+    deckbox = user_data.get("deckbox_name")
+    wishlist_id = await MongoClient.get_deckbox_id(
+        deckbox_name=deckbox,
+        wishlist=True,
+    )
+    wishlist_cards_dict = await MongoClient.get_deckbox_cards_dict(
+        deckbox_id=wishlist_id,
+        wishlist=True,
+    )
+    wishlist_cards_list = list(wishlist_cards_dict.keys())
+    wish_results = []
+    if len(wishlist_cards_list) > 10:
+      cards_chunks = await Utils.split_list_into_chunks(
+          input_list=wishlist_cards_list,
+          max_length=10,
+      )
+      for chunk in cards_chunks:
+        chunk_result = await Backend.wish_for_cards(
+            received_cards=chunk,
+            telegram_name=telegram_name,
+            received_deckboxes=received_deckboxes,
+        )
+        wish_results.append(chunk_result)
+    else:
+      result = await Backend.wish_for_cards(
+          received_cards=wishlist_cards_list,
+          telegram_name=telegram_name,
+          received_deckboxes=received_deckboxes,
+      )
+      wish_results.append(result)
+    deckboxes = await MongoClient.get_all_deckboxes(tradelist=True)
+    total = await Utils.construct_united_search_dict(input_dicts=wish_results)
+    messages = await Utils.construct_found_message(
+        found_object=total,
+        deckbox_names=deckboxes,
+    )
+    final_message_results = []
+    command = "menu"
+    match search_type:
+      case "all":
+        command = "menu"
+      case "conflux":
+        command = "confluxmenu"
+      case "deckbox":
+        command= "deckboxmenu"
+      case _:
+        command = "menu"
+    for message in messages:
+      part = Utils.generate_outgoing_message(
+        command=command,
+        chat_id=chat_id,
+        message_text=message,
+      )
+      final_message_results.append(part)
+    return final_message_results
+
+  @classmethod
+  async def conflux_search_wishlist(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Searches for cards from user wishlist in conflux.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
+    telegram_name = f"@{message_text}"
+    # Check if the user exists in mongo db
+    user_exists = await MongoClient.check_if_user_exists(
+        telegram_name=telegram_name,
+    )
+    if not user_exists:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"You need to register first! Use /reg to register.",
+          options={"registered": False},
+      )
+    # Find user's wishlist
+    user_data = await MongoClient.get_user_data(telegram=telegram_name)
+    deckbox = user_data.get("deckbox_name")
+    wishlist_id = await MongoClient.get_deckbox_id(
+        deckbox_name=deckbox,
+        wishlist=True,
+    )
+    if not wishlist_id:
+      return Utils.generate_outgoing_message(
+          command="confluxmenu",
+          chat_id=chat_id,
+          message_text=f"You do not have a deckbox wishlist registered.",
+          options={"registered": True},
+      )
+    wishlist_cards_dict = await MongoClient.get_deckbox_cards_dict(
+        deckbox_id=wishlist_id,
+        wishlist=True,
+    )
+    wishlist_cards_list = list(wishlist_cards_dict.keys())
+    result = await Backend.wish_for_cards_in_conflux(
+        received_cards=wishlist_cards_list,
+    )
+    messages = await Utils.construct_found_store_message(
+        found_object=result,
+        store_name="Conflux",
+    )
+    final_message_results = []
+    for message in messages:
+      part = Utils.generate_outgoing_message(
+        command="confluxmenu",
+        chat_id=chat_id,
+        message_text=message,
+      )
+      final_message_results.append(part)
+    return final_message_results
+
+  @classmethod
+  async def add_store(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Adds a new store to the DB.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with user name
+    Returns:
+      A dict with message encoded into bytes
+    """
+    name = message_text.lower()
+    new_store = {
+        "name": name,
+        "cards": {},
+    }
+    exists = await MongoClient.check_if_store_exists(store_name=name)
+    if exists:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"The store {name} is already registered!",
+      )
+    success = await MongoClient.add_store(object=new_store)
+    if not success:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"Failed to add store {name}! Try again!",
+          options={"registered": success},
+      )
+    return Utils.generate_outgoing_message(
+        command="menu",
+        chat_id=chat_id,
+        message_text=f"Successfully added store {name}!",
+        options={"registered": success},
+        )
+
+  @classmethod
+  async def add_store_subscription_to_user(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Adds a new subscription to the user in the DB.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with dict with user name and store to add
+    Returns:
+      A dict with message encoded into bytes
+    """
+    message_dict = json.loads(message_text)
+    telegram_name = f"@{message_dict.get("telegram", "")}"
+    store = message_dict.get("store")
+    # Check if the user exists in mongo db
+    user_exists = await MongoClient.check_if_user_exists(
+        telegram_name=telegram_name,
+    )
+    if not user_exists:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"You need to register first! Use /reg to register.",
+          options={"registered": False},
+      )
+    # Check if the store exists in mongo db
+    store_exists = await MongoClient.check_if_store_exists(
+        store_name=store,
+    )
+    if not store_exists:
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=f"Store '{store}' not found!",
+          options={"registered": True},
+      )
+    # Add store subscription to user
+    result = await MongoClient.add_store_subscription_to_user(
+        subscription_name=store,
+        telegram=telegram_name,
+    )
+    if not result:
+      return Utils.generate_outgoing_message(
+          command="confluxmenu",
+          chat_id=chat_id,
+          message_text=f"Failed to subscribe to {store}",
+      )
+    return Utils.generate_outgoing_message(
+        command="confluxmenu",
+        chat_id=chat_id,
+        message_text=f"You subscribed to {store}",
+    )
+
+  @classmethod
+  async def remove_store_subscription_from_user(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Removes a store subscription to the user in the DB.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with dict with user name and store to remove
+    Returns:
+      A dict with message encoded into bytes
+    """
+    message_dict = json.loads(message_text)
+    telegram_name = f"@{message_dict.get("telegram", "")}"
+    store = message_dict.get("store")
+    # Check if the user exists in mongo db
+    user_exists = await MongoClient.check_if_user_exists(
+        telegram_name=telegram_name,
+    )
+    if not user_exists:
+      return Utils.generate_outgoing_message(
+          command="confluxmenu",
+          chat_id=chat_id,
+          message_text=f"You need to register first! Use /reg to register.",
+          options={"registered": False},
+      )
+    result = await MongoClient.remove_store_subscription_from_user(
+        subscription_name=store,
+        telegram=telegram_name,
+    )
+    if not result:
+      return Utils.generate_outgoing_message(
+          command="confluxmenu",
+          chat_id=chat_id,
+          message_text=f"Failed to unsubscribe from {store}",
+      )
+    return Utils.generate_outgoing_message(
+        command="confluxmenu",
+        chat_id=chat_id,
+        message_text=f"You unsubscribed from {store}",
+    )
+
+  @classmethod
+  async def recache_deckboxes_manually(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Re-caches all deckboxes in the DB manually.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with dict with user name and deckbox to add
+    Returns:
+      A dict with message encoded into bytes
+    """
+    await Backend.deckboxes_cache_scheduled_job()
+    return Utils.generate_outgoing_message(
+        command="menu",
+        chat_id=chat_id,
+        message_text=f"Initiated manual deckboxes re-cache",
+    )
+
+  @classmethod
+  async def recache_conflux_manually(
+      cls,
+      chat_id: str,
+      message_text: str,
+  ) -> bytes:
+    """Re-caches conflux store in the DB manually.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with dict with user name and deckbox to add
+    Returns:
+      A dict with message encoded into bytes
+    """
+    await Backend.conflux_cache_scheduled_job()
+    return Utils.generate_outgoing_message(
+        command="menu",
+        chat_id=chat_id,
+        message_text=f"Initiated manual conflux caching!",
+    )
 
   @classmethod
   async def resolve_command(
@@ -892,6 +1538,10 @@ class TelegramCommands:
     match command:
       case "any_message" | "help":
         return await cls.show_help(chat_id=chat_id)
+      case "dbhelp":
+        return await cls.show_deckbox_help(chat_id=chat_id)
+      case "confluxhelp":
+        return await cls.show_conflux_help(chat_id=chat_id)
       # Scryfall card URL fetcher
       case "c":
         return await cls.show_full_card_url(
@@ -907,6 +1557,12 @@ class TelegramCommands:
       # Scryfall card price fetcher
       case "cp":
         return await cls.show_card_price(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      # Sending a message to user
+      case "sendmsg":
+        return await cls.send_freeform_message(
             chat_id=chat_id,
             message_text=message_text,
         )
@@ -958,15 +1614,39 @@ class TelegramCommands:
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Searching for chosen cards in chosen deckboxes
+      case "dbsearch":
+        return await cls.deckboxes_search_cards(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
       # Searching for cards from a wishlist
       case "wish":
         return await cls.search_cards_from_wishlist(
             chat_id=chat_id,
             message_text=message_text,
         )
+      # Searching for cards from a wishlist in chosen deckboxes
+      case "dbwish":
+        return await cls.deckboxes_search_cards_from_wishlist(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
       # Sending a starting menu
       case "start":
         return await cls.get_user_menu(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      # Sending a deckbox menu
+      case "deckboxmenu":
+        return await cls.get_deckbox_menu(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      # Sending a conflux menu
+      case "confluxmenu":
+        return await cls.get_conflux_menu(
             chat_id=chat_id,
             message_text=message_text,
         )
@@ -984,6 +1664,48 @@ class TelegramCommands:
       # Handling quiz replies
       case "quiz_answer":
         return await cls.handle_quiz_reply(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      # Handling quiz replies
+      case "addstore":
+        return await cls.add_store(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      # Subscribing to conflux
+      case "confluxsub":
+        return await cls.add_store_subscription_to_user(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      # Unsubscribing from conflux
+      case "confluxunsub":
+        return await cls.remove_store_subscription_from_user(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      # Searching for cards in conflux
+      case "consearch":
+        return await cls.conflux_search_cards(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      # Searching for cards from a wishlist in conflux
+      case "conwish":
+        return await cls.conflux_search_wishlist(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      # Re-caching all deckboxes manually
+      case "deckboxrecache":
+        return await cls.recache_deckboxes_manually(
+            chat_id=chat_id,
+            message_text=message_text,
+        )
+      # Re-caching conflux manually
+      case "confluxcache":
+        return await cls.recache_conflux_manually(
             chat_id=chat_id,
             message_text=message_text,
         )

@@ -38,3 +38,20 @@ DECKBOX_LOGIN = os.getenv("DECKBOX_LOGIN")
 DECKBOX_PASSWORD = os.getenv("DECKBOX_PASSWORD")
 DECKBOX_COOKIE = ""
 DECKBOX_COOKIE_LAST_LOGIN = ""
+
+# Admins
+admins_str = os.getenv("ADMINS")
+if not admins_str:
+    ADMINS = ""
+if "," in admins_str:
+    ADMINS = admins_str.split(",")
+else:
+    ADMINS = [admins_str]
+# Stores
+stores_str = os.getenv("STORES")
+if not stores_str:
+    STORES = ""
+if "," in stores_str:
+    STORES = stores_str.split(",")
+else:
+    STORES = [stores_str]

@@ -3,9 +3,11 @@
 import asyncio
 import aio_pika
 import json
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from bot.config import config
 from bot.config.http_client import HttpClient
 from bot.backend.commands import TelegramCommands
+from bot.backend.backend import Backend
 
 class FromUserListener:
   connection = None
@@ -98,6 +100,8 @@ class FromUserListener:
               message=aio_pika.Message(body=element),
               routing_key=config.TO_USER_QUEUE_NAME,
             )
+            if len(return_message) > 5:
+              await asyncio.sleep(1)
         else:
           await exchange.publish(
               message=aio_pika.Message(body=return_message),
@@ -109,6 +113,24 @@ class FromUserListener:
     """Starts RabbitMQ listener.
     """
     await HttpClient.init_client()
+    # Scheduler
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(
+        Backend.conflux_cache_scheduled_job,
+        "cron",
+        hour=3,
+        minute=0,
+        timezone="CET",
+    )
+    scheduler.add_job(
+        Backend.deckboxes_cache_scheduled_job,
+        "cron",
+        hour=12,
+        minute=0,
+        timezone="CET",
+    )
+    scheduler.start()
+
     connection = await cls.connect()
     monitor_connection = asyncio.create_task(cls.monitor_connection())
     try:
