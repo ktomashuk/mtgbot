@@ -355,6 +355,7 @@ class TelegramCommands:
         "deckbox_name": "",
         "moxfield_name": "",
         "deckbox_subscriptions": {},
+        "store_subscriptions": {},
     }
     exists = await MongoClient.check_if_user_exists(telegram_name=full_name)
     if exists:
@@ -1495,7 +1496,7 @@ class TelegramCommands:
     return Utils.generate_outgoing_message(
         command="menu",
         chat_id=chat_id,
-        message_text=f"Initiated manual deckboxes re-cache",
+        message_text=f"Completed manual deckboxes re-cache",
     )
 
   @classmethod
@@ -1516,7 +1517,7 @@ class TelegramCommands:
     return Utils.generate_outgoing_message(
         command="menu",
         chat_id=chat_id,
-        message_text=f"Initiated manual conflux caching!",
+        message_text=f"Completed manual conflux caching!",
     )
 
   @classmethod

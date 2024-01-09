@@ -656,7 +656,7 @@ class MagicBot:
       user_store_subs = await MongoClient.get_user_store_subscriptions(
           telegram=f"@{username}"
       )
-      if "conflux" in user_store_subs:
+      if user_store_subs and "conflux" in user_store_subs:
         await cls.send_message_to_queue(
             command="consearch",
             chat_id=update.effective_chat.id,
@@ -727,7 +727,7 @@ class MagicBot:
       user_store_subs = await MongoClient.get_user_store_subscriptions(
           telegram=f"@{username}"
       )
-      if "conflux" in user_store_subs:
+      if user_store_subs and "conflux" in user_store_subs:
         # Get the length of the wishlist
         user_data = await MongoClient.get_user_data(telegram=f"@{username}")
         deckbox = user_data.get("deckbox_name")
