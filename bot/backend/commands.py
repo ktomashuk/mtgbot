@@ -356,6 +356,7 @@ class TelegramCommands:
         "moxfield_name": "",
         "deckbox_subscriptions": {},
         "store_subscriptions": {},
+        "chat_id": chat_id,
     }
     exists = await MongoClient.check_if_user_exists(telegram_name=full_name)
     if exists:
@@ -403,20 +404,22 @@ class TelegramCommands:
     full_name = f"@{message_text}"
     text = "You need to register first! Use command /reg"
     exists = await MongoClient.check_if_user_exists(telegram_name=full_name)
-    # Check if user has chat ID assigned to them
-    user_data = await MongoClient.get_user_data(
-        telegram=full_name,
-    )
-    user_chat_id = user_data.get("chat_id")
-    if not user_chat_id:
-      update = await MongoClient.add_chat_id_to_user(
-          chat_id=chat_id,
-          telegram_name=full_name
-      )
-      if not update:
-        print(f"Failed to add chat_id {chat_id} of user {full_name} to the DB")
     if exists:
       text = "Choose a command"
+      # Check if user has chat ID assigned to them
+      user_data = await MongoClient.get_user_data(
+          telegram=full_name,
+      )
+      user_chat_id = user_data.get("chat_id")
+      if not user_chat_id:
+        update = await MongoClient.add_chat_id_to_user(
+            chat_id=chat_id,
+            telegram_name=full_name
+        )
+        if not update:
+          print(f"Failed to add chat_id {chat_id} of user {full_name} to DB")
+        else:
+          text = "The bot can now send you updates!"
     return Utils.generate_outgoing_message(
         command="menu",
         chat_id=chat_id,
