@@ -4,8 +4,6 @@ services:
   mongodb:
     container_name: mongo
     image: mongo
-    ports:
-      - "27120:27017"
     networks:
       - bot_network
     volumes:

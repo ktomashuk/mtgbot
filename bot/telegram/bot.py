@@ -912,6 +912,40 @@ class MagicBot:
     )
 
   @classmethod
+  async def ru_mtg_handler(
+      cls,
+      update: Update,
+      context: ContextTypes.DEFAULT_TYPE
+  ) -> None:
+    """Handler that responds with a list of ru-mtg deckboxes.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    """
+    if update.effective_chat.type != "private":
+      return
+    rumtg = (
+        "anahoret\n"
+        "buttelius\n"
+        "alexgaidukov\n"
+        "denski\n"
+        "alexey_g\n"
+        "sathonyx\n"
+        "alexvoron\n"
+        "chieftain\n"
+        "nekromancer\n"
+        "macros013\n"
+        "crazyfen\n"
+        "skyhound\n"
+        "hmchk\n"
+        "bthrsn\n"
+        "rid42\n"
+        "1ndifferent\n"
+    )
+    await update.message.reply_text(rumtg)
+
+  @classmethod
   async def deckbox_help_handler(
       cls,
       update: Update,
@@ -1417,6 +1451,7 @@ class MagicBot:
     app.add_handler(CommandHandler("wish", cls.wishlist_search_handler))
     app.add_handler(CommandHandler("conwish", cls.conflux_wishlist_handler))
     app.add_handler(CommandHandler("help", cls.any_message_handler))
+    app.add_handler(CommandHandler("rumtg", cls.ru_mtg_handler))
     app.add_handler(CommandHandler("dbhelp", cls.deckbox_help_handler))
     app.add_handler(CommandHandler("confluxhelp", cls.conflux_help_handler))
     app.add_handler(CommandHandler("main", cls.start_with_keyboard))
