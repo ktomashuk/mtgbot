@@ -552,7 +552,7 @@ class MagicBot:
       user = update.message.from_user
       username = user.username
       user_input = update.message.text
-      lines = user_input.split("\n")
+      lines = [line.strip() for line in user_input.split("\n")]
       for line in lines:
         message_object = {
             "telegram": username,
@@ -613,7 +613,7 @@ class MagicBot:
       user = update.message.from_user
       username = user.username
       user_input = update.message.text
-      lines = user_input.split("\n")
+      lines = [line.strip() for line in user_input.split("\n")]
       for line in lines:
         message_object = {
             "telegram": username,
@@ -645,7 +645,7 @@ class MagicBot:
       user = update.message.from_user
       username = user.username
       user_input = update.message.text
-      lines = user_input.split("\n")
+      lines = [line.strip() for line in user_input.split("\n")]
       message_object = {
             "telegram": username,
             "cards": lines,
@@ -688,7 +688,7 @@ class MagicBot:
       user = update.message.from_user
       username = user.username
       user_input = update.message.text
-      lines = user_input.split("\n")
+      lines = [line.strip() for line in user_input.split("\n")]
       message_object = {
             "telegram": username,
             "cards": lines,
@@ -766,7 +766,7 @@ class MagicBot:
     if update.effective_chat.type == "private":
       user = update.message.from_user
       user_input = update.message.text
-      lines = user_input.split("\n")
+      lines = [line.strip() for line in user_input.split("\n")]
       username = user.username
       message_object = {
           "telegram": username,
