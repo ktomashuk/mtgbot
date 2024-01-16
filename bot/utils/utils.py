@@ -121,7 +121,7 @@ class Utils:
     if result_message:
       messages.append(result_message)
     if not messages:
-      messages = ["No cards were found :("]
+      messages = ["No cards were found in deckboxes :("]
     return messages
 
   @classmethod
@@ -158,7 +158,7 @@ class Utils:
     if cards_list:
       messages.append(result_message)
     if not messages:
-      messages = ["No cards were found :("]
+      messages = [f"No cards were found in {store_name} :("]
     return messages
 
   @classmethod

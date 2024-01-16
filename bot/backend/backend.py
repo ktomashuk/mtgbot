@@ -169,34 +169,35 @@ class Backend:
         # Loop through subscribers and check if they have diff cards in wishlist
         for subscriber in subscribed:
           subscriber_name = subscriber.get("deckbox_name")
-          user_wishlist_id = await MongoClient.get_deckbox_id(
-              deckbox_name=subscriber_name,
-              wishlist=True,
-          )
-          user_wishlist_cards = await MongoClient.get_deckbox_cards_dict(
-              deckbox_id=user_wishlist_id,
-              wishlist=True,
-          )
-          found_cards = {}
-          for card in diff_dict.keys():
-            if card in user_wishlist_cards:
-              found_cards[card] = diff_dict.get(card)
-          if found_cards:
-            # Check if the user has a chat id
-            subscriber_chat_id = subscriber.get("chat_id")
-            if subscriber_chat_id:
-              # Construct a message with cards
-              messages = await Utils.construct_subscription_message(
-                  found_object=found_cards,
-                  deckbox_name=name,
-                  deckbox_id=deckbox_id,
-              )
-              for message in messages:
-                await MagicBot.send_message_to_queue(
-                    command="sendmsg",
-                    chat_id=subscriber_chat_id,
-                    message_text=message,
+          if subscriber_name:
+            user_wishlist_id = await MongoClient.get_deckbox_id(
+                deckbox_name=subscriber_name,
+                wishlist=True,
+            )
+            user_wishlist_cards = await MongoClient.get_deckbox_cards_dict(
+                deckbox_id=user_wishlist_id,
+                wishlist=True,
+            )
+            found_cards = {}
+            for card in diff_dict.keys():
+              if card in user_wishlist_cards:
+                found_cards[card] = diff_dict.get(card)
+            if found_cards:
+              # Check if the user has a chat id
+              subscriber_chat_id = subscriber.get("chat_id")
+              if subscriber_chat_id:
+                # Construct a message with cards
+                messages = await Utils.construct_subscription_message(
+                    found_object=found_cards,
+                    deckbox_name=name,
+                    deckbox_id=deckbox_id,
                 )
+                for message in messages:
+                  await MagicBot.send_message_to_queue(
+                      command="sendmsg",
+                      chat_id=subscriber_chat_id,
+                      message_text=message,
+                  )
       (new_status, _) = await MongoClient.update_deckbox(
           deckbox=deckbox_id,
           object=new_cache,

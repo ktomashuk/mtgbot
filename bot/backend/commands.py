@@ -173,7 +173,9 @@ class TelegramCommands:
     message_dict = json.loads(message_text)
     text = message_dict.get("text", "")
     message_id = message_dict.get("message_id", "")
-    user_card_name = text.lower()
+    user_card_name = "dummytext"
+    if text:
+      user_card_name = text.lower()
     # Check if the quiz with this message id exists
     quiz = await MongoClient.get_quiz_object(message_id=message_id)
     if quiz:
@@ -1123,6 +1125,20 @@ class TelegramCommands:
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
       )
+    # Check if user has a deckbox
+    user_data = await MongoClient.get_user_data(telegram=telegram_name)
+    user_deckbox = user_data.get("deckbox_name")
+    if not user_deckbox:
+      message = (
+          "You need to register a deckbox first to get your wishlist!\n"
+          "Use /regdeckbox to register a deckbox."
+      )
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=message,
+          options={"registered": True},
+      )
     # Check if user is subscrbed to deckboxes
     sub_dict = await MongoClient.get_user_subscriptions(
         telegram=telegram_name,
@@ -1220,6 +1236,20 @@ class TelegramCommands:
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
       )
+    # Check if user has a deckbox
+    user_data = await MongoClient.get_user_data(telegram=telegram_name)
+    user_deckbox = user_data.get("deckbox_name")
+    if not user_deckbox:
+      message = (
+          "You need to register a deckbox first to get your wishlist!\n"
+          "Use /regdeckbox to register a deckbox."
+      )
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=message,
+          options={"registered": True},
+      )
     # Find user's wishlist
     user_data = await MongoClient.get_user_data(telegram=telegram_name)
     deckbox = user_data.get("deckbox_name")
@@ -1303,6 +1333,20 @@ class TelegramCommands:
           chat_id=chat_id,
           message_text=f"You need to register first! Use /reg to register.",
           options={"registered": False},
+      )
+    # Check if user has a deckbox
+    user_data = await MongoClient.get_user_data(telegram=telegram_name)
+    user_deckbox = user_data.get("deckbox_name")
+    if not user_deckbox:
+      message = (
+          "You need to register a deckbox first to get your wishlist!\n"
+          "Use /regdeckbox to register a deckbox."
+      )
+      return Utils.generate_outgoing_message(
+          command="menu",
+          chat_id=chat_id,
+          message_text=message,
+          options={"registered": True},
       )
     # Find user's wishlist
     user_data = await MongoClient.get_user_data(telegram=telegram_name)
