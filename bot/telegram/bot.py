@@ -780,6 +780,7 @@ class MagicBot:
           chat_id=update.effective_chat.id,
           message_text=message_string,
       )
+      return ConversationHandler.END
 
   @classmethod
   async def conflux_wishlist_handler(
