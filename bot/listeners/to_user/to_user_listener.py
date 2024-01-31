@@ -120,6 +120,19 @@ class ToUserListener:
                 registered=options.get("registered", True),
                 disable_preview=options.get("disable_preview", True),
             )
+          case "leaguemenu":
+            await MagicBot.send_league_menu_to_user(
+                chat_id=chat_id,
+                message=message,
+                registered=options.get("registered", True),
+                disable_preview=options.get("disable_preview", True),
+            )
+          case "leaguematchconfirm":
+            await MagicBot.send_league_match_confirmation_to_user(
+                chat_id=chat_id,
+                message=message,
+                disable_preview=options.get("disable_preview", True),
+            )
           case "poll":
             await MagicBot.send_poll_to_channel(
                 chat_id=chat_id,

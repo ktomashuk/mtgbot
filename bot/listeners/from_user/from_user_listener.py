@@ -129,6 +129,14 @@ class FromUserListener:
         minute=0,
         timezone="CET",
     )
+    scheduler.add_job(
+        Backend.league_new_week_scheduled_job,
+        "cron",
+        day_of_week="mon",
+        hour=10,
+        minute=0,
+        timezone="CET",
+    )
     scheduler.start()
 
     connection = await cls.connect()

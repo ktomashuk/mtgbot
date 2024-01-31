@@ -464,3 +464,58 @@ class Backend:
           tradelist=True,
       )
       print(f"Tradelist {account} ({tradelist}) cached: {result}")
+
+  @classmethod
+  async def league_new_week_scheduled_job(cls) -> None:
+    """Progresses the leagues 1 week forward and sends announcements.
+    """
+    print("Updating all the leagues")
+    all_active_leagues = await MongoClient.get_all_leagues()
+    for league in all_active_leagues:
+      league_message = ""
+      league_name = league.get("league_name")
+      league_id = league.get("league_id")
+      current_week = league.get("current_week")
+      total_weeks = league.get("total_duration_weeks")
+      channels = league.get("subscribed_channels")
+      # Get the leaderboard
+      all_players = await MongoClient.get_all_leagues_players(
+          league_id=league_id,
+      )
+      sorted_players = sorted(
+          all_players,
+          key=lambda x: x["total_points"],
+          reverse=True,
+      )
+      top_players = []
+      for player in sorted_players[:5]:
+        streak = ""
+        if player["win_streak"] >= 3:
+          streak = f"🔥"
+        player_message = (
+            f"{player["telegram"]} "
+            f"{player["standing_wins"]}-{player["standing_losses"]} "
+            f"({player["total_points"]} points) {streak}"
+        )
+        top_players.append(player_message)
+      leaderboard_players = "\n".join(top_players)
+      leaderboard = "\n<b>Top 5 players:</b>\n" + leaderboard_players
+      print(f"CURRENT: {current_week}")
+      print(f"TOTAL: {total_weeks}")
+      if current_week == total_weeks:
+        league_message += f"The league '{league_name}' has ended!\n"
+      elif current_week < total_weeks:
+        update = await MongoClient.update_league(league_id=league_id)
+        if update:
+          league_message += (
+              f"The league '{league_name}' has entered week "
+              f"{int(current_week) + 1} out of {total_weeks}!\n"
+              "All participants have 3 more standing matches and "
+              "can add a new booster pack to their pool!\n"
+          )
+      league_message += leaderboard
+      for channel in channels.keys():
+        await MagicBot.send_message_to_user(
+            chat_id=channel,
+            message=league_message
+        )

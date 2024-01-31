@@ -1,10 +1,29 @@
 """Module with assorted utility functions.
 """
 import json
+import random
+import string
 from bot.deckbox.deckbox import Deckbox
 from bot.mongo.mongo_client import MongoClient
 
 class Utils:
+
+  @classmethod
+  async def generate_random_id(
+      cls,
+      length: int = 8,
+  ) -> str:
+    """Creates a random ID from random numbers.
+
+    Args:
+      length: length of the ID (Defaults to 8)
+
+    Returns:
+      A string with the ID
+    """
+    characters = string.digits
+    random_id = ''.join(random.choices(characters, k=length))
+    return random_id
 
   @classmethod
   def generate_outgoing_message(

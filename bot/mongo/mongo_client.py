@@ -845,3 +845,416 @@ class MongoClient:
       subscriptions = user_data.get("store_subscriptions")
       return subscriptions
     return None
+
+  # League stuff
+  @classmethod
+  async def add_league(
+      cls,
+      object: dict,
+  ) -> bool:
+    """Adds a new object with the user data to the "leagues" collection.
+
+    Args:
+      object: a dictionary with user data to be added
+    Returns:
+      A boolean with status of the operation
+    """
+    result = await cls.league_collection.insert_one(object)
+    if result:
+      return result.acknowledged
+    else:
+      return False
+
+  @classmethod
+  async def add_league_player(
+      cls,
+      object: dict,
+  ) -> bool:
+    """Adds a new object with the user data to the "league_players" collection.
+
+    Args:
+      object: a dictionary with user data to be added
+    Returns:
+      A boolean with status of the operation
+    """
+    result = await cls.league_players_collection.insert_one(object)
+    if result:
+      return result.acknowledged
+    else:
+      return False
+
+  @classmethod
+  async def get_league_player(
+      cls,
+      telegram: str,
+      league_id: str,
+  ) -> dict:
+    """Fetches the player data for chosen telegram name.
+
+    Args:
+      telegram: telegram name of the player
+      league_id: ID of the league
+    Returns:
+      A string with the username associated with the decklist ID
+    """
+    query = {"telegram": telegram.lower(), "league_id": league_id.lower()}
+    result = await cls.league_players_collection.find_one(query)
+    return result
+
+  @classmethod
+  async def check_if_player_in_league(
+      cls,
+      telegram: str,
+      league_id: str,
+  ) -> bool:
+    """Checks if a player is already participating in a league.
+
+    Args:
+      telegram: telegram name of the player
+      league_id: ID of the league
+
+    Returns:
+      A bool with player status in league
+    """
+    query = {"telegram": telegram.lower(), "league_id": league_id.lower()}
+    cursor = cls.league_players_collection.find(query)
+    result = await cursor.to_list(length=None)
+    return len(result) > 0
+
+  @classmethod
+  async def add_league_match(
+      cls,
+      object: dict,
+  ) -> bool:
+    """Adds a new object with the user data to the "league_matches" collection.
+
+    Args:
+      object: a dictionary with user data to be added
+    Returns:
+      A boolean with status of the operation
+    """
+    result = await cls.league_matches_collection.insert_one(object)
+    if result:
+      return result.acknowledged
+    else:
+      return False
+
+  @classmethod
+  async def add_league_invite(
+      cls,
+      object: dict,
+  ) -> bool:
+    """Adds a new object with the user data to the "league_invites" collection.
+
+    Args:
+      object: a dictionary with user data to be added
+    Returns:
+      A boolean with status of the operation
+    """
+    result = await cls.league_invite_collection.insert_one(object)
+    if result:
+      return result.acknowledged
+    else:
+      return False
+
+  @classmethod
+  async def delete_league_invite(cls, invite_id: str) -> bool:
+    """
+    Deletes an object with the specified invite_id from the 
+    "league_invites" collection.
+
+    Args:
+      invite_id: the ID of the invite to be deleted
+
+    Returns:
+      A boolean indicating the success status of the operation
+    """
+    result = await cls.league_invite_collection.delete_one(
+      {"invite_code": invite_id}
+    )
+    if result:
+        return result.deleted_count > 0
+    else:
+        return False
+
+  @classmethod
+  async def get_league(
+      cls,
+      league_id: str,
+  ) -> dict:
+    """Fetches the league data for chosen league ID.
+
+    Args:
+      league_id: id of the league
+    Returns:
+      A string with the username associated with the decklist ID
+    """
+    result = await cls.league_collection.find_one(
+        {"league_id": league_id.lower()}
+    )
+    return result
+
+  @classmethod
+  async def get_all_leagues(
+      cls,
+  ) -> dict:
+    """Fetches all the active leagues.
+
+    Returns:
+      A string with the username associated with the decklist ID
+    """
+    cursor = cls.league_collection.find(
+        {"active": True}
+    )
+    result = await cursor.to_list(length=None)
+    return result
+
+  @classmethod
+  async def get_all_leagues_players(
+      cls,
+      league_id: str,
+  ) -> dict:
+    """Fetches all the players in a league.
+
+    Args:
+      league_id: ID of the league
+    Returns:
+      A string with the username associated with the decklist ID
+    """
+    cursor = cls.league_players_collection.find(
+        {"league_id": league_id}
+    )
+    result = await cursor.to_list(length=None)
+    return result
+
+  @classmethod
+  async def get_all_leagues_for_player(
+      cls,
+      telegram: str,
+  ) -> dict:
+    """Fetches all the active leagues for a chosen player.
+
+    Args:
+      telegram: telegram name of the player
+
+    Returns:
+      A string with the username associated with the decklist ID
+    """
+    player_cursor = cls.league_players_collection.find(
+        {"telegram": telegram.lower()}
+    )
+    player_data = await player_cursor.to_list(length=None)
+    league_ids = [player["league_id"] for player in player_data]
+    league_cursor = cls.league_collection.find(
+        {"league_id": {"$in": league_ids}, "active": True}
+    )
+    active_leagues = await league_cursor.to_list(length=None)
+    return active_leagues
+
+  @classmethod
+  async def get_all_player_matches(
+      cls,
+      telegram: str,
+  ) -> dict:
+    """Fetches all matches for a chosen player.
+
+    Args:
+      telegram: telegram name of the player
+
+    Returns:
+      A string with the username associated with the decklist ID
+    """
+    player_cursor = cls.league_matches_collection.find({
+        "$or": [
+            {"player_one": telegram.lower()},
+            {"player_two": telegram.lower()}
+        ]
+    })
+    result = await player_cursor.to_list(length=None)
+    return result
+
+  @classmethod
+  async def get_league_invite(
+      cls,
+      invite_code: str,
+  ) -> dict:
+    """Fetches the league invite data for chosen invite code.
+
+    Args:
+      invite_code: code of the league invite
+    Returns:
+      A dict with league invite
+    """
+    result = await cls.league_invite_collection.find_one(
+        {"invite_code": invite_code.lower()}
+    )
+    return result
+
+  @classmethod
+  async def update_player(
+      cls,
+      telegram : str,
+      win: bool,
+      standing: bool,
+      broke_streak: bool,
+  ) -> bool:
+    """Updates the player scores.
+
+    Args:
+      store_name: name of the store to update
+      cards: a dictionary with cards data to be added
+    Returns:
+      A tuple with a boolean status of the operation and a message
+    """
+    win_points = 0
+    loss_points = 0
+    if broke_streak:
+      win_points += 1
+    if standing:
+      win_points += 2
+      loss_points = 1
+    if win:
+      result = await cls.league_players_collection.update_one(
+          {"telegram": telegram.lower()},
+          {"$inc": {
+              "total_points": win_points,
+              "total_played": 1,
+              "total_wins": 1,
+              "standing_matches_played": 1 if standing else 0,
+              "standing_wins": 1 if standing else 0,
+              "win_streak": 1,
+          }}
+      )
+    if not win:
+      result = await cls.league_players_collection.update_one(
+          {"telegram": telegram.lower()},
+          {"$inc": {
+              "total_points": loss_points,
+              "total_played": 1,
+              "total_losses": 1,
+              "standing_matches_played": 1 if standing else 0,
+              "standing_losses": 1 if standing else 0,
+          },
+          "$set": {"win_streak": 0}
+          },
+      )
+    if not result:
+      return False
+    else:
+      return True
+
+  @classmethod
+  async def update_league(
+      cls,
+      league_id : str,
+  ) -> bool:
+    """Updates the league and moves it 1 week forward.
+
+    Args:
+      league_id: ID of the league
+    Returns:
+      A tuple with a boolean status of the operation and a message
+    """
+    result = await cls.league_collection.update_one(
+        {"league_id": league_id},
+        {"$inc": {
+            "current_week": 1,
+        }}
+    )
+    if not result:
+      return False
+    else:
+      return True
+
+  @classmethod
+  async def get_player_standing_against_player(
+      cls,
+      player_one: str,
+      player_two: str,
+  ) -> list:
+    """fetches all the standings for player one against player two.
+
+    Args:
+      player_one: telegram username of player one
+      player_two telegram username of player two
+    Returns:
+      A string with the username associated with the decklist ID
+    """
+    query = {
+        f"standings.{player_one}": True,
+        f"standings.{player_two}": {"$exists": True}
+    }
+    cursor = cls.league_matches_collection.find(query)
+    result = await cursor.to_list(length=None)
+    return result
+
+  @classmethod
+  async def add_league_subscription(
+      cls,
+      chat_id: str,
+      league_id: str,
+  ) -> bool:
+    """Updates the "subscribed_channels" key in the "leagues" collection for a
+    given league.
+
+    Args:
+      chat_id: id of the chat that subscribes to league
+      league_id: league to subscribe to
+
+    Returns:
+      A boolean with the status of the operation
+    """
+    update_field = f"subscribed_channels.{chat_id}"
+    result = None
+    result = await cls.league_collection.update_one(
+        {"league_id": league_id},
+        {"$set": {update_field: True}}
+    )
+    return result
+
+  @classmethod
+  async def remove_league_subscription(
+      cls,
+      chat_id: str,
+      league_id: str,
+  ) -> bool:
+    """Updates the "subscribed_channels" key in the "leagues" collection for a
+    given league.
+
+    Args:
+      chat_id: id of the chat that subscribes to league
+      league_id: league to subscribe to
+
+    Returns:
+      A boolean with the status of the operation
+    """
+    update_field = f"subscribed_channels.{chat_id}"
+    result = None
+    result = await cls.league_collection.update_one(
+        {"league_id": league_id},
+        {"$unset": {update_field: True}}
+    )
+    return result
+
+  @classmethod
+  async def change_league_status(
+      cls,
+      league_id: str,
+      status: bool,
+  ) -> bool:
+    """Updates the "active" key in the "leagues" collection for a
+    given league.
+
+    Args:
+      league_id: league to subscribe to
+      status: new status for the league
+
+    Returns:
+      A boolean with the status of the operation
+    """
+    result = None
+    result = await cls.league_collection.update_one(
+        {"league_id": league_id},
+        {"$set": {"active": status}}
+    )
+    return result
