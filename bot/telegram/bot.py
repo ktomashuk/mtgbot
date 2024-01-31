@@ -231,7 +231,8 @@ class MagicBot:
       )
       keyboard = []
       for player in all_players:
-        keyboard.append([f"{player.get("telegram")}"])
+        if player != f"@{username}":
+          keyboard.append([f"{player.get("telegram")}"])
       reply_markup = ReplyKeyboardMarkup(
           keyboard,
           resize_keyboard=True,
