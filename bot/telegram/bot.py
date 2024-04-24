@@ -1433,6 +1433,7 @@ class MagicBot:
         command="edhdanas",
         chat_id=update.effective_chat.id,
         message_text=message_string,
+        message_thread_id=update.message.message_thread_id
     )
 
   @classmethod
