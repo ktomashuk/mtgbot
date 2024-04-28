@@ -84,9 +84,11 @@ class FromUserListener:
         data_dict = json.loads(decoded_string)
         command = data_dict.get("command")
         chat_id = data_dict.get("chat_id")
+        message_thread_id = data_dict.get("message_thread_id")
         message = data_dict.get("text")
         return_message = await TelegramCommands.resolve_command(
             chat_id=chat_id,
+            message_thread_id=message_thread_id,
             command=command,
             message_text=message,
         )

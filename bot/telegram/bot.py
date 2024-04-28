@@ -22,6 +22,7 @@ from telegram.ext import (
     filters,
     MessageHandler,
     CallbackQueryHandler,
+    PollAnswerHandler,
 )
 from telegram import ReplyKeyboardRemove
 from bot.config import config
@@ -43,7 +44,6 @@ class MagicBot:
   league_game_register_input = 0
   league_id, league_user = range(2)
   league_for_match_choice = 0
-
 
   @classmethod
   async def league_standings_choice_inline_menu(
@@ -430,15 +430,19 @@ class MagicBot:
       chat_id: str,
       message: str,
       disable_preview: bool = True,
+      message_thread_id: str | None = None,
   ) -> None:
     """Sends a message to a user.
 
     Args:
       chat_id: id of the chat with the user
       message: message that will be sent to the user
+      disable_preview: set true to disable previews of pages
+      message_thread_id: ID of the thread in the group
     """
     await cls.bot.send_message(
         chat_id=chat_id,
+        message_thread_id=message_thread_id,
         text=message,
         parse_mode="HTML",
         disable_web_page_preview=disable_preview,
@@ -450,18 +454,21 @@ class MagicBot:
       from_chat_id: str,
       to_chat_id: str,
       message_id: str,
+      message_thread_id: str | None = None,
   ) -> None:
     """Forwards a message from chat to chat.
 
     Args:
       from_chat_id: id of the chat the message is forwarded from
       to_chat_id: id of the chat the message is forwarded to
-      message_id: ID of the forwarded message 
+      message_id: ID of the forwarded message
+      message_thread_id: ID of the thread in the group
     """
     await cls.bot.forward_message(
         chat_id=to_chat_id,
         from_chat_id=from_chat_id,
         message_id=message_id,
+        message_thread_id=message_thread_id,
     )
 
   @classmethod
@@ -657,6 +664,7 @@ class MagicBot:
       chat_id: str,
       message: str,
       answers: list[str],
+      message_thread_id: str | None = None,
   ) -> bool:
     """Sends a poll to the channel.
 
@@ -664,22 +672,37 @@ class MagicBot:
       chat_id: id of the chat with the user
       message: message in the poll
       answers: a list of answers
+      message_thread_id: ID of the thread in the group
     Returns:
       A bool showing if poll result was added to mongo
     """
     poll_message = await cls.bot.send_poll(
         chat_id=chat_id,
+        message_thread_id=message_thread_id,
         question=message,
         options=answers,
         is_anonymous=False,
+        allows_multiple_answers=True,
     )
     message_id = poll_message.message_id
+    poll_id = poll_message.poll.id
     now = datetime.now()
     datetime_string = now.strftime("%Y-%m-%d")
     edh_danas_object = {
       "chat_id": chat_id,
       "message_id": message_id,
+      "message_thread_id": message_thread_id,
+      "poll_id": poll_id,
       "timestamp": datetime_string,
+      "all_voters": [],
+      "ravnica_yes_voters": [],
+      "underground_yes_voters": [],
+      "dice_arena_yes_voters": [],
+      "nbg_yes_voters": [],
+      "ravnica_alerted": [],
+      "underground_alerted": [],
+      "dice_arena_alerted": [],
+      "nbg_alerted": [],
     }
     result = await MongoClient.add_edh_danas(object=edh_danas_object)
     return result
@@ -1234,14 +1257,20 @@ class MagicBot:
       cls,
       chat_id: str,
       image_url: str,
+      message_thread_id: str | None = None,
   ) -> None:
     """Sends an image to a user.
 
     Args:
       chat_id: id of the chat with the user
       image_url: url of the image that will be sent to the user
+      message_thread_id: ID of the thread in the group
     """
-    await cls.bot.send_photo(chat_id=chat_id, photo=image_url)
+    await cls.bot.send_photo(
+        chat_id=chat_id,
+        photo=image_url,
+        message_thread_id=message_thread_id,
+    )
 
   @classmethod
   async def send_quiz_image_to_chat(
@@ -1269,6 +1298,7 @@ class MagicBot:
       command: str,
       chat_id: str,
       message_text: str,
+      message_thread_id: str | None = None,
   ) -> None:
     """Sends a message to a "from-user" rabbitmq queue.
 
@@ -1276,10 +1306,12 @@ class MagicBot:
       command: name of the command that should be processed
       chat_id: id of the chat with the user
       message_text: message that will be sent to the user
+      message_thread_id: ID of the thread in the group
     """
     message = Utils.generate_outgoing_message(
         command=command,
         chat_id=chat_id,
+        message_thread_id=message_thread_id,
         message_text=message_text,
     )
     connection = await connect_robust(**config.AIO_PIKA_PARAMETERS)
@@ -1425,13 +1457,21 @@ class MagicBot:
       chat_type = "group"
     message_object = {
         "message": "EDH danas?",
-        "options": ["Da", "Ne", "Ne znam"],
+        "options": [
+            "Da, Ravnica",
+            "Da, Underground",
+            "Da, Dice Arena",
+            "Da, Groot/3D",
+            "Ne",
+            "Ne znam",
+        ],
         "chat_type": chat_type,
     }
     message_string = json.dumps(message_object)
     await cls.send_message_to_queue(
         command="edhdanas",
         chat_id=update.effective_chat.id,
+        message_thread_id=update.message.message_thread_id,
         message_text=message_string,
     )
 
@@ -1568,10 +1608,10 @@ class MagicBot:
     if len(split_message) < 2:
       return
     card_name = split_message[1]
-    print(f"Received a /ci command with text: {card_name}")
     await cls.send_message_to_queue(
         command="ci",
         chat_id=update.effective_chat.id,
+        message_thread_id=update.message.message_thread_id,
         message_text=card_name,
     )
 
@@ -1615,6 +1655,7 @@ class MagicBot:
     await cls.send_message_to_queue(
         command="c",
         chat_id=update.effective_chat.id,
+        message_thread_id=update.message.message_thread_id,
         message_text=card_name,
     )
 
@@ -1639,6 +1680,7 @@ class MagicBot:
     await cls.send_message_to_queue(
         command="cp",
         chat_id=update.effective_chat.id,
+        message_thread_id=update.message.message_thread_id,
         message_text=card_name,
     )
 
@@ -2151,6 +2193,41 @@ class MagicBot:
     )
 
   @classmethod
+  async def handle_poll_answer(
+      cls,
+      update: Update,
+      context: CallbackContext,
+  ) -> None:
+    """Handler that reacts to users voting in a poll.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    """
+    poll_answer = update.poll_answer
+    poll_id = update.poll_answer.poll_id
+    user_id = poll_answer.user.id
+    options = poll_answer.option_ids
+    check = await MongoClient.check_if_edhdanas_exists(
+        poll_id=poll_id
+    )
+    if check:
+      await MongoClient.update_edhdanas(
+          poll_id=poll_id,
+          user_id=user_id,
+          votes=options,
+      )
+      users_to_alert = await MongoClient.check_edhdanas_completed_pods(
+          poll_id=poll_id,
+      )
+      for user_tuple in users_to_alert:
+        await cls.send_message_to_queue(
+            command="sendmsg",
+            chat_id=user_tuple[0],
+            message_text=user_tuple[1],
+        )
+
+  @classmethod
   def run_bot(cls):
     """A function that creates command handlers and runs the bot.
     """
@@ -2253,7 +2330,7 @@ class MagicBot:
     app.add_handler(CommandHandler("reg", cls.user_registration_handler))
     app.add_handler(CommandHandler("mydeckbox", cls.deckbox_check_handler))
     app.add_handler(CommandHandler("updatedeckbox", cls.deckbox_update_handler))
-    app.add_handler(CommandHandler("edhdanas", cls.edh_danas_handler))
+    app.add_handler(CommandHandler("edhdanastest", cls.edh_danas_handler))
     app.add_handler(CommandHandler("wish", cls.wishlist_search_handler))
     app.add_handler(CommandHandler("conwish", cls.conflux_wishlist_handler))
     app.add_handler(CommandHandler("help", cls.any_message_handler))
@@ -2270,6 +2347,8 @@ class MagicBot:
     app.add_handler(CommandHandler("confluxunsub", cls.conflux_unsub_handler))
     app.add_handler(CommandHandler("confluxcache", cls.conflux_cache_handler))
     app.add_handler(CommandHandler("confluxhelp", cls.conflux_help_handler))
+    # Poll
+    app.add_handler(PollAnswerHandler(cls.handle_poll_answer))
     # League
     app.add_handler(CommandHandler(
         "leaguestatus", cls.league_status_change_handler)

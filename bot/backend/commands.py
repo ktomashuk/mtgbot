@@ -17,18 +17,21 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
+      message_thread_id: str | None = None,
   ) -> bytes:
     """Sends a freeform message to chat.
 
     Args:
       chat_id: Id of the telegram chat to send message to
       message_text: text with card name
+      message_thread_id: ID of the thread in the group
     Returns:
       A dict with message encoded into bytes
     """
     return Utils.generate_outgoing_message(
         command="text",
         chat_id=chat_id,
+        message_thread_id=message_thread_id,
         message_text=message_text,
     )
 
@@ -37,12 +40,14 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
+      message_thread_id: str | None = None,
   ) -> bytes:
     """Sends a full card URL to the chat.
 
     Args:
       chat_id: Id of the telegram chat to send message to
       message_text: text with card URL
+      message_thread_id: ID of the thread in the group
     Returns:
       A dict with message encoded into bytes
     """
@@ -60,6 +65,7 @@ class TelegramCommands:
       return Utils.generate_outgoing_message(
           command="text",
           chat_id=chat_id,
+          message_thread_id=message_thread_id,
           message_text=card_uri,
           options={"disable_preview": False},
       )
@@ -69,12 +75,14 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
+      message_thread_id: str | None = None,
   ) -> bytes:
     """Sends a card Image to the chat.
 
     Args:
       chat_id: Id of the telegram chat to send message to
       message_text: text with card image URL
+      message_thread_id: ID of the thread in the group
     Returns:
       A dict with message encoded into bytes
     """
@@ -94,6 +102,7 @@ class TelegramCommands:
         message =  Utils.generate_outgoing_message(
             command="image",
             chat_id=chat_id,
+            message_thread_id=message_thread_id,
             message_text=image,
         )
         image_results.append(message)
@@ -131,12 +140,14 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
+      message_thread_id: str | None = None,
   ) -> bytes:
     """Sends a card prices to the chat.
 
     Args:
       chat_id: Id of the telegram chat to send message to
       message_text: text with card name
+      message_thread_id: ID of the thread in the group
     Returns:
       A dict with message encoded into bytes
     """
@@ -154,6 +165,7 @@ class TelegramCommands:
       return Utils.generate_outgoing_message(
           command="text",
           chat_id=chat_id,
+          message_thread_id=message_thread_id,
           message_text=card_prices,
       )
 
@@ -317,6 +329,7 @@ class TelegramCommands:
       cls,
       chat_id: str,
       message_text: str,
+      message_thread_id: str | None = None,
   ) -> bytes:
     """Sends a EDH dans poll to the chat or forwards the existing one.
 
@@ -341,6 +354,7 @@ class TelegramCommands:
       return Utils.generate_outgoing_message(
           command="forward",
           chat_id=chat_id,
+          message_thread_id=message_thread_id,
           message_text="",
           options=options,
       )
@@ -348,6 +362,7 @@ class TelegramCommands:
       return Utils.generate_outgoing_message(
           command="poll",
           chat_id=chat_id,
+          message_thread_id=message_thread_id,
           message_text=message,
           options=options,
       )
@@ -2282,6 +2297,7 @@ class TelegramCommands:
       chat_id: str,
       command: str,
       message_text: str,
+      message_thread_id: str | None,
   ) -> bytes:
     """Resolves a command that came in the queue.
 
@@ -2289,6 +2305,7 @@ class TelegramCommands:
       chat_id: Id of the telegram chat to send message to
       command: received command
       message_text: text that will be send to the command function
+      message_thread_id: ID of the thread in the group
     Returns:
       A dict with message encoded into bytes
     """
@@ -2306,11 +2323,13 @@ class TelegramCommands:
         return await cls.show_full_card_url(
             chat_id=chat_id,
             message_text=message_text,
+            message_thread_id=message_thread_id,
         )
       # Scryfall card image fetcher
       case "ci":
         return await cls.show_card_image(
             chat_id=chat_id,
+            message_thread_id=message_thread_id,
             message_text=message_text,
         )
       # Scryfall card price fetcher
@@ -2318,12 +2337,14 @@ class TelegramCommands:
         return await cls.show_card_price(
             chat_id=chat_id,
             message_text=message_text,
+            message_thread_id=message_thread_id,
         )
       # Sending a message to user
       case "sendmsg":
         return await cls.send_freeform_message(
             chat_id=chat_id,
             message_text=message_text,
+            message_thread_id=message_thread_id,
         )
       # Registering a user
       case "reg":
@@ -2420,6 +2441,7 @@ class TelegramCommands:
         return await cls.edh_danas_send_poll(
             chat_id=chat_id,
             message_text=message_text,
+            message_thread_id=message_thread_id,
         )
       # Sending a new quiz message
       case "quiz":
@@ -2545,5 +2567,6 @@ class TelegramCommands:
         return Utils.generate_outgoing_message(
             command="text",
             chat_id=chat_id,
+            message_thread_id=message_thread_id,
             message_text=text,
         )

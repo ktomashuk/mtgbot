@@ -31,6 +31,7 @@ class Utils:
       command: str,
       chat_id: str,
       message_text: str,
+      message_thread_id: str | None = None,
       options: dict | None = None,
       bot_type: str = "telegram",
   ) -> bytes:
@@ -40,6 +41,7 @@ class Utils:
       command: a string with a command to send
       chat_id: id of the chat to send response to
       message_text: message that will be sent
+      message_thread_id: ID of the thread in the group
       options: additional options to send
       bot_type: type of the bot, defaults to "telegram"
     Returns:
@@ -50,6 +52,7 @@ class Utils:
     message = {
       "command": command,
       "chat_id": chat_id,
+      "message_thread_id": message_thread_id,
       "text": message_text,
       "bot_type": bot_type,
       "options": options,

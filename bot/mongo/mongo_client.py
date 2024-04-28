@@ -108,6 +108,7 @@ class MongoClient:
       cls,
       telegram_name: str | None = None,
       discord_name: str | None = None,
+      chat_id: str | None = None,
   ) -> bool:
     """Tries to fetch a user with a given name from the "users" collection and
     checks if the user exists.
@@ -115,6 +116,7 @@ class MongoClient:
     Args:
       telegram_name: telegram username to check
       discord_name: discord username to check
+      chat_id: user chat ID to check
     Returns:
       True if the user exists, False if they don't
     """
@@ -130,6 +132,10 @@ class MongoClient:
     elif discord_name:
       user = await cls.users_colletion.find_one(
           {"discord": discord_name.lower()}
+      )
+    elif chat_id:
+      user = await cls.users_colletion.find_one(
+          {"chat_id": chat_id}
       )
     return user is not None
 
@@ -309,6 +315,220 @@ class MongoClient:
         {"timestamp": timestamp}
     )
     return result
+
+  @classmethod
+  async def check_if_edhdanas_exists(
+      cls,
+      poll_id: str,
+  ) -> bool:
+    """Tries to fetch a EDHdanas with a given ID and
+    checks if the poll exists.
+
+    Args:
+      poll_id: poll ID to check
+    Returns:
+      True if the edhdanas exists, False if they don't
+    """
+    poll = None
+    poll = await cls.edh_danas_collection.find_one(
+        {"poll_id": poll_id.lower()}
+    )
+    return poll is not None
+
+  @classmethod
+  async def check_edhdanas_completed_pods(
+      cls,
+      poll_id: str,
+  ) -> list[tuple[str]]:
+    """Tries to fetch a store with a given name from the "stores" collection and
+    checks if the store exists.
+
+    Args:
+      poll_id: poll ID to check
+    Returns:
+      A list of tuples with users to alert (chat_id, message)
+    """
+    people_to_alert = []
+    result = {}
+    result = await cls.edh_danas_collection.find_one(
+        {"poll_id": poll_id.lower()}
+    )
+    ravnica_msg = "At least 4 players have voted for EDH in Ravnica!"
+    ug_msg = "At least 4 players have voted for EDH in Underground!"
+    da_msg = "At least 4 players have voted for EDH in Dice Arena!"
+    nbg_msg = "At least 4 players have voted for EDH in 3D/Groot!"
+    ravnica_voters = result.get("ravnica_yes_voters", [])
+    ravnica_alerted = result.get("ravnica_alerted", [])
+    underground_voters = result.get("underground_yes_voters", [])
+    underground_alerted = result.get("underground_alerted", [])
+    dice_arena_voters = result.get("dice_arena_yes_voters", [])
+    dice_arena_alerted = result.get("dice_arena_alerted", [])
+    nbg_voters = result.get("nbg_yes_voters", [])
+    nbg_alerted = result.get("nbg_alerted", [])
+    if len(ravnica_voters) > 3:
+      for voter in ravnica_voters:
+        is_registered = await cls.check_if_user_exists(chat_id=voter)
+        if is_registered and not voter in ravnica_alerted:
+          people_to_alert.append((voter, ravnica_msg))
+          await cls.edh_danas_collection.update_one(
+              {"poll_id": poll_id},
+              {"$addToSet": {"ravnica_alerted": voter},}
+          )
+    if len(underground_voters) > 3:
+      for voter in underground_voters:
+        is_registered = await cls.check_if_user_exists(chat_id=voter)
+        if is_registered and not voter in underground_alerted:
+          people_to_alert.append((voter, ug_msg))
+          await cls.edh_danas_collection.update_one(
+              {"poll_id": poll_id},
+              {"$addToSet": {"underground_alerted": voter},}
+          )
+    if len(dice_arena_voters) > 3:
+      for voter in dice_arena_voters:
+        is_registered = await cls.check_if_user_exists(chat_id=voter)
+        if is_registered and not voter in dice_arena_alerted:
+          people_to_alert.append((voter, da_msg))
+          await cls.edh_danas_collection.update_one(
+              {"poll_id": poll_id},
+              {"$addToSet": {"dice_arena_alerted": voter},}
+          )
+    if len(nbg_voters) > 3:
+      for voter in nbg_voters:
+        is_registered = await cls.check_if_user_exists(chat_id=voter)
+        if is_registered and not voter in nbg_alerted:
+          people_to_alert.append((voter, nbg_msg))
+          await cls.edh_danas_collection.update_one(
+              {"poll_id": poll_id},
+              {"$addToSet": {"nbg_alerted": voter},}
+          )
+    return people_to_alert
+
+  @classmethod
+  async def update_edhdanas(
+      cls,
+      poll_id: str,
+      user_id : str,
+      votes: list[int],
+  ) -> None:
+    """Updates the EDHdanas poll when a user voted.
+
+    Args:
+      poll_id: ID of the poll to update
+      user_id: chat_id of the user
+      votes: a list of user's vote choices
+    """
+    result = await cls.edh_danas_collection.find_one(
+        {"poll_id": poll_id}
+    )
+    all_voters = result.get("all_voters", [])
+    # Check if the voting user has already voted
+    if user_id in all_voters:
+      # Remove all the old results first
+      await cls.edh_danas_collection.update_one(
+          {"poll_id": poll_id},
+          {"$pull": {"all_voters": user_id},}
+      )
+      ravnica_voters = result.get("ravnica_yes_voters", [])
+      underground_voters = result.get("underground_yes_voters", [])
+      dice_arena_voters = result.get("dice_arena_yes_voters", [])
+      nbg_voters = result.get("nbg_yes_voters", [])
+      if user_id in ravnica_voters:
+        await cls.edh_danas_collection.update_one(
+            {"poll_id": poll_id},
+            {
+              "$pull": {"ravnica_yes_voters": user_id},
+            }
+        )
+      if user_id in underground_voters:
+        await cls.edh_danas_collection.update_one(
+            {"poll_id": poll_id},
+            {
+              "$pull": {"underground_yes_voters": user_id},
+            }
+        )
+      if user_id in dice_arena_voters:
+        await cls.edh_danas_collection.update_one(
+            {"poll_id": poll_id},
+            {
+              "$pull": {"dice_arena_yes_voters": user_id},
+            }
+        )
+      if user_id in nbg_voters:
+        await cls.edh_danas_collection.update_one(
+            {"poll_id": poll_id},
+            {
+              "$pull": {"nbg_yes_voters": user_id},
+            }
+        )
+    # If user votes for the first time
+    await cls.edh_danas_collection.update_one(
+          {"poll_id": poll_id},
+          {
+            "$addToSet": {"all_voters": user_id},
+          }
+      )
+    if 0 in votes:
+      # If they voted for Ravnica
+      await cls.edh_danas_collection.update_one(
+          {"poll_id": poll_id},
+          {
+            "$addToSet": {"ravnica_yes_voters": user_id},
+          }
+      )
+    if 1 in votes:
+      # If they voted for Underground
+      await cls.edh_danas_collection.update_one(
+          {"poll_id": poll_id},
+          {
+            "$addToSet": {"underground_yes_voters": user_id},
+          }
+      )
+    if 2 in votes:
+      # If they voted for Dice Arena
+      await cls.edh_danas_collection.update_one(
+          {"poll_id": poll_id},
+          {
+            "$addToSet": {"dice_arena_yes_voters": user_id},
+          }
+      )
+    if 3 in votes:
+      # If they voted for NBG
+      await cls.edh_danas_collection.update_one(
+          {"poll_id": poll_id},
+          {
+            "$addToSet": {"nbg_yes_voters": user_id},
+          }
+      )
+    # After all votes were assigned check if any of them brought the total
+    # count to 4, meaning user will see the 4+ players after they voted
+    # and we don't need to alert them and so we add them to alerted players
+    new_result = await cls.edh_danas_collection.find_one(
+        {"poll_id": poll_id}
+    )
+    new_ravnica_voters = new_result.get("ravnica_yes_voters", [])
+    if len(new_ravnica_voters) > 3:
+      await cls.edh_danas_collection.update_one(
+          {"poll_id": poll_id},
+          {"$addToSet": {"ravnica_alerted": user_id},}
+      )
+    new_underground_voters = new_result.get("underground_yes_voters", [])
+    if len(new_underground_voters) > 3:
+      await cls.edh_danas_collection.update_one(
+          {"poll_id": poll_id},
+          {"$addToSet": {"underground_alerted": user_id},}
+      )
+    new_dice_arena_voters = new_result.get("dice_arena_yes_voters", [])
+    if len(new_dice_arena_voters) > 3:
+      await cls.edh_danas_collection.update_one(
+          {"poll_id": poll_id},
+          {"$addToSet": {"dice_arena_alerted": user_id},}
+      )
+    new_nbg_voters = new_result.get("nbg_yes_voters", [])
+    if len(new_nbg_voters) > 3:
+      await cls.edh_danas_collection.update_one(
+          {"poll_id": poll_id},
+          {"$addToSet": {"nbg_alerted": user_id},}
+      )
 
   @classmethod
   async def delete_edh_danas(

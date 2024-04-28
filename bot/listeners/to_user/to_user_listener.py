@@ -85,18 +85,21 @@ class ToUserListener:
       chat_id = data_dict.get("chat_id", "")
       message = data_dict.get("text", "")
       options = data_dict.get("options", dict())
+      message_thread_id = data_dict.get("message_thread_id")
       # Telegram commands
       if bot_type == "telegram":
         match command:
           case "text":
             await MagicBot.send_message_to_user(
                 chat_id=chat_id,
+                message_thread_id=message_thread_id,
                 message=message,
                 disable_preview=options.get("disable_preview", True),
             )
           case "image":
             await MagicBot.send_image_to_user(
                 chat_id=chat_id,
+                message_thread_id=message_thread_id,
                 image_url=message,
             )
           case "menu":
@@ -136,6 +139,7 @@ class ToUserListener:
           case "poll":
             await MagicBot.send_poll_to_channel(
                 chat_id=chat_id,
+                message_thread_id=message_thread_id,
                 message=message,
                 answers=options,
             )
@@ -143,6 +147,7 @@ class ToUserListener:
             await MagicBot.forward_message_to_chat(
                 from_chat_id=options.get("chat_id", ""),
                 to_chat_id=chat_id,
+                message_thread_id=message_thread_id,
                 message_id=options.get("message_id", ""),
             )
           case "quiz":
