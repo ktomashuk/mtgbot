@@ -2330,7 +2330,7 @@ class MagicBot:
     app.add_handler(CommandHandler("reg", cls.user_registration_handler))
     app.add_handler(CommandHandler("mydeckbox", cls.deckbox_check_handler))
     app.add_handler(CommandHandler("updatedeckbox", cls.deckbox_update_handler))
-    app.add_handler(CommandHandler("edhdanastest", cls.edh_danas_handler))
+    app.add_handler(CommandHandler("edhdanas", cls.edh_danas_handler))
     app.add_handler(CommandHandler("wish", cls.wishlist_search_handler))
     app.add_handler(CommandHandler("conwish", cls.conflux_wishlist_handler))
     app.add_handler(CommandHandler("help", cls.any_message_handler))
