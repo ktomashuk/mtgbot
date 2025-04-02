@@ -45,6 +45,13 @@ class MagicBot:
   league_id, league_user = range(2)
   league_for_match_choice = 0
 
+  # Antispam measures
+
+  @classmethod
+  async def handle_new_member():
+    pass
+
+
   @classmethod
   async def league_standings_choice_inline_menu(
       cls,
