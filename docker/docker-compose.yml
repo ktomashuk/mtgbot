@@ -1,15 +1,13 @@
-version: '3'
 services:
 
   mongodb:
     container_name: mongo
-    image: mongo
+    image: mongo:4.4
     networks:
       - bot_network
     volumes:
       - mongo_data:/data/db
     restart: always
-    command: mongod --auth
 
   rabbitmq:
     container_name: rabbit-mq

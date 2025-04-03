@@ -44,12 +44,100 @@ class MagicBot:
   league_game_register_input = 0
   league_id, league_user = range(2)
   league_for_match_choice = 0
-
   # Antispam measures
+  new_users = {}
 
   @classmethod
-  async def handle_new_member():
-    pass
+  async def test_button(
+      cls,
+      update: Update,
+      context: ContextTypes.DEFAULT_TYPE,
+  ) -> None:
+    """Handler that responds with a list of ru-mtg deckboxes.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    """
+    user = update.message.from_user
+    username = user.username
+    user_id = user.id
+    cls.new_users[user_id] = username
+    chat_id = update.effective_chat.id
+    print(cls.new_users)
+    await cls.send_message_to_queue(
+        command="verification",
+        chat_id=chat_id,
+        message_text=username,
+    )
+    asyncio.create_task(cls.ban_user(
+        context=context,
+        user_id=user_id,
+        chat_id=chat_id,
+        wait_timer=10,
+    ))
+
+  @classmethod
+  async def handle_new_member(
+      cls,
+      update: Update,
+      context: CallbackContext,
+  ) -> None:
+    """Handles new member entering chat.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    """
+    for member in update.message.new_chat_members:
+      user_id = member.id
+      username = member.username or member.first_name
+      keyboard = [[InlineKeyboardButton("Verify", callback_data=f'verify_{user_id}')]]
+      reply_markup = InlineKeyboardMarkup(keyboard)
+      
+      await update.message.reply_text(
+          f"Welcome {username}! Please verify yourself within 5 minutes by clicking the button below.",
+          reply_markup=reply_markup
+      )
+
+  @classmethod
+  async def verify(
+      cls,
+      update: Update, 
+      context: ContextTypes.DEFAULT_TYPE,
+  ):
+    query = update.callback_query
+    await query.answer()
+    user = query.from_user
+    username = user.username
+    if query.data.startswith("answer_"):
+      print(query.data)
+    # username_from_query = query.data.split('_')[1]
+    print(f"query triggered by {username}")
+    # await update.message.reply_text(
+    #   f"{username_from_query} YOU HAVE PRESSED A BUTTON"
+    # )
+
+  @classmethod
+  async def ban_user(
+      cls,
+      context: CallbackContext,
+      user_id: int,
+      chat_id: int,
+      wait_timer: int
+  ) -> None:
+    """Kicks a user from chat.
+
+    Args:
+      context: telegram-bot parameter
+      user_id: ID of the user
+    """
+    print(f"SETTING TIMER FOR {wait_timer} seconds")
+    await asyncio.sleep(wait_timer)
+    until_date = int((asyncio.get_event_loop().time()) + 600)
+    if user_id in cls.new_users:
+      await context.bot.ban_chat_member(chat_id, user_id, until_date=until_date)
+    del cls.new_users[user_id]
 
 
   @classmethod
@@ -1280,6 +1368,42 @@ class MagicBot:
     )
 
   @classmethod
+  async def send_verification_message_to_user(
+      cls,
+      chat_id: str,
+      image_url: str,
+      answers: list[int],
+      correct: int,
+      username: str,
+      message_thread_id: str | None = None,
+  ) -> None:
+    """Sends an image to a user.
+
+    Args:
+      chat_id: id of the chat with the user
+      image_url: url of the image that will be sent to the user
+      options: text to display on buttons on inline keyboard
+      message_thread_id: ID of the thread in the group
+    """
+    keyboard = []
+    for answer in answers:
+      keyboard.append(
+        [InlineKeyboardButton(answer, callback_data=f"answer_{username}_{answer}{'_correct' if answer == correct else ''}")]
+      )
+    keyboard_markup = InlineKeyboardMarkup(keyboard)
+    await cls.bot.send_photo(
+        chat_id=chat_id,
+        photo=image_url,
+        message_thread_id=message_thread_id,
+        caption=(
+            "Добро пожаловать в группу Magic the Gathering в Белграде!\n"
+            "Чтобы верифицировать, что вы человек, выберите правильный Mana Value / Converted Mana Cost этой карты.\n"
+            "Вам надо ответить за 5 минут, иначе вы будете забанены на 10 минут."
+        ),
+        reply_markup=keyboard_markup,
+    )
+
+  @classmethod
   async def send_quiz_image_to_chat(
       cls,
       chat_id: str,
@@ -2321,6 +2445,10 @@ class MagicBot:
     )
     app = ApplicationBuilder().token(token=config.BOT_TOKEN).build()
     app.add_handler(league_match_handler)
+    app.add_handler(CallbackQueryHandler(
+      callback=cls.verify,
+      pattern="^answer_"
+    ))
     app.add_handler(CallbackQueryHandler(cls.button))
     app.add_handler(deckbox_bulk_subscribe_handler)
     app.add_handler(deckbox_bulk_unsubscribe_handler)
@@ -2356,6 +2484,13 @@ class MagicBot:
     app.add_handler(CommandHandler("confluxhelp", cls.conflux_help_handler))
     # Poll
     app.add_handler(PollAnswerHandler(cls.handle_poll_answer))
+    # Antispam
+    # Antispam
+    app.add_handler(MessageHandler(
+      filters=filters.StatusUpdate.NEW_CHAT_MEMBERS,
+      callback=cls.handle_new_member,
+    ))
+    app.add_handler(CommandHandler("testbtn", cls.test_button))
     # League
     app.add_handler(CommandHandler(
         "leaguestatus", cls.league_status_change_handler)

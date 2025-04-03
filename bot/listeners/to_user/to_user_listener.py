@@ -102,6 +102,15 @@ class ToUserListener:
                 message_thread_id=message_thread_id,
                 image_url=message,
             )
+          case "verification":
+            await MagicBot.send_verification_message_to_user(
+                chat_id=chat_id,
+                message_thread_id=message_thread_id,
+                image_url=message,
+                answers=options.get("answers"),
+                username=options.get("username"),
+                correct=options.get("correct"),
+            )
           case "menu":
             await MagicBot.send_menu_to_user(
                 chat_id=chat_id,
