@@ -78,7 +78,7 @@ class TelegramCommands:
       message_text: str,
       message_thread_id: str | None = None,
   ) -> bytes:
-    """Sends a card Image to the chat.
+    """Sends a captcha verification to the chat.
 
     Args:
       chat_id: Id of the telegram chat to send message to

@@ -59,13 +59,13 @@ class MagicBot:
       username: str,
       time: int = 300,
   ) -> None:
-    """Schedules user disapproval after 60 seconds.
+    """Schedules user disapproval after a set time.
 
     Args:
       chat_id: ID of the chat to mute the user in
       user_id: ID of the user
       username: username of the user
-      time: time to wait before disapproving the user
+      time: time to wait before disapproving the user (Defaults to 300 seconds)
     """
     await asyncio.sleep(time)
     message_object = {"user_id": user_id, "username": username}
@@ -113,7 +113,7 @@ class MagicBot:
       update: Update, 
       context: ContextTypes.DEFAULT_TYPE,
   ):
-    """Handles user pressing buttons in inline keyboards.
+    """Handles user pressing buttons in inline captcha keyboard.
 
     Args:
       update: telegram-bot parameter
@@ -211,7 +211,6 @@ class MagicBot:
       del cls.new_users[user_id]
     # Delete the message with verification in any case
     message_id = cls.verification_messages.get(user_id)
-    print(f"Deleting message with ID {message_id}")
     try:
       await cls.bot.delete_message(chat_id=chat_id, message_id=message_id)
     except Exception as e:
