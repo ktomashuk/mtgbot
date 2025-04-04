@@ -2,7 +2,9 @@ services:
 
   mongodb:
     container_name: mongo
-    image: mongo:4.4
+    image: mongo:latest
+    ports:
+      - "27017:27017"
     networks:
       - bot_network
     volumes:

@@ -26,6 +26,9 @@ class ScryfallFetcher:
   ) -> dict | None:
     """Fetches random card info from scryfall API.
 
+    Args:
+      non_zero_cmc: set to True to fetch only cards with CMC >= 1
+
     Returns:
       A dict with card json data
     """
@@ -52,6 +55,9 @@ class ScryfallFetcher:
 
     Args:
       card_name: name of the card
+      random_card: set to True to fetch a random card
+      non_zero_cmc: set to True to fetch only cards with CMC >= 1
+
     Returns:
       A list of strings with the image urls (empty if card doesn't exist)
     """
