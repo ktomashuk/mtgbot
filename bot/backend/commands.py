@@ -87,7 +87,9 @@ class TelegramCommands:
     Returns:
       A dict with message encoded into bytes
     """
-    username = message_text
+    message_dict = json.loads(message_text)
+    username = message_dict.get("username", "")
+    user_id = message_dict.get("user_id", "")
     card_data = await ScryfallFetcher.get_random_card(non_zero_cmc=True)
     card_cmc = int(card_data.get("cmc"))
     other_numbers = random.sample([n for n in range(1, 11) if n != card_cmc], 3)
@@ -107,6 +109,7 @@ class TelegramCommands:
             "answers": answers,
             "username": username,
             "correct": card_cmc,
+            "user_id": user_id,
         }
     )
 

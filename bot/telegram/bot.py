@@ -57,7 +57,7 @@ class MagicBot:
       chat_id: str,
       user_id: str,
       username: str,
-      time: int = 60,
+      time: int = 300,
   ) -> None:
     """Schedules user disapproval after 60 seconds.
 
@@ -77,39 +77,6 @@ class MagicBot:
     )
 
   @classmethod
-  async def test_button(
-      cls,
-      update: Update,
-      context: ContextTypes.DEFAULT_TYPE,
-  ) -> None:
-    """Handles user pressing buttons in inline keyboards.
-
-    Args:
-      update: telegram-bot parameter
-      context: telegram-bot parameter
-    """
-    user = update.message.from_user
-    username = user.username
-    user_id = user.id
-    cls.new_users[user_id] = username
-    chat_id = update.effective_chat.id
-    await cls.send_message_to_queue(
-        command="verification",
-        chat_id=chat_id,
-        message_text=user_id,
-    )
-    await cls.mute_user(
-        context=context,
-        user_id=user_id,
-        chat_id=update.effective_chat.id,
-    )
-    await cls.schedule_user_disapproval(
-        chat_id=chat_id,
-        user_id=user_id,
-        username=username,
-    )
-
-  @classmethod
   async def handle_new_member(
       cls,
       update: Update,
@@ -126,21 +93,19 @@ class MagicBot:
     user_id = user.id
     cls.new_users[user_id] = username
     chat_id = update.effective_chat.id
+    message_object = {"user_id": user_id, "username": username}
+    message_string = json.dumps(message_object)
     await cls.send_message_to_queue(
         command="verification",
         chat_id=chat_id,
-        message_text=user_id,
+        message_text=message_string,
     )
     await cls.mute_user(
         context=context,
         user_id=user_id,
         chat_id=update.effective_chat.id,
     )
-    await cls.schedule_user_disapproval(
-        chat_id=chat_id,
-        user_id=user_id,
-        username=username,
-    )
+    asyncio.create_task(cls.schedule_user_disapproval(chat_id, user_id, username))
 
   @classmethod
   async def verify(
@@ -158,13 +123,11 @@ class MagicBot:
     await query.answer()
     user = query.from_user
     user_id = user.id
-    print(f"User {user.username} pressed a button")
     if query.data.startswith("answer_"):
       user_id_from_query = int(query.data.split('_')[1])
       message_object = {"user_id": user_id, "username": user.username}
       message_string = json.dumps(message_object)
       if user_id == user_id_from_query:
-        print("Correct user pressed a button")
         if query.data.endswith("_correct"):
           await cls.send_message_to_queue(
               command="approve",
@@ -199,6 +162,9 @@ class MagicBot:
       disable_preview: set true to disable previews of pages
       message_thread_id: ID of the thread in the group
     """
+    # Check if the user ID is in new_users
+    if user_id in cls.new_users:
+      del cls.new_users[user_id]
     restrictions = ChatPermissions(can_send_messages=True, can_send_photos=True)
     try:
       await cls.bot.restrict_chat_member(chat_id, user_id, permissions=restrictions)
@@ -241,6 +207,8 @@ class MagicBot:
     if user_id not in cls.new_users:
       print(f"User {user_id} not found in new_users")
       return
+    else:
+      del cls.new_users[user_id]
     # Delete the message with verification in any case
     message_id = cls.verification_messages.get(user_id)
     print(f"Deleting message with ID {message_id}")
@@ -1534,6 +1502,7 @@ class MagicBot:
       image_url: str,
       answers: list[int],
       correct: int,
+      user_id: int,
       username: str,
       message_thread_id: str | None = None,
   ) -> None:
@@ -1544,35 +1513,30 @@ class MagicBot:
       image_url: url of the image that will be sent to the user
       answers: a list of answers
       correct: the correct answer
-      username: user's identification
+      user_id: user's ID
+      username: user's telegram username
       message_thread_id: ID of the thread in the group
     """
-    print(f"Sending verification message to user {username} with ID {chat_id}")
     keyboard = []
     for answer in answers:
       random_string = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(6))
       keyboard.append(
-        [InlineKeyboardButton(answer, callback_data=f"answer_{username}_{random_string}{'_correct' if answer == correct else ''}")]
+        [InlineKeyboardButton(answer, callback_data=f"answer_{user_id}_{random_string}{'_correct' if answer == correct else ''}")]
       )
     keyboard_markup = InlineKeyboardMarkup(keyboard)
-    for k in keyboard:
-      print(f"Button: {k[0].text}, Callback Data: {k[0].callback_data}")
     message = await cls.bot.send_photo(
         chat_id=chat_id,
         photo=image_url,
         message_thread_id=message_thread_id,
         caption=(
-            "Добро пожаловать в группу Magic the Gathering в Белграде!\n"
+            f"@{username} Добро пожаловать в группу Magic the Gathering в Белграде!\n"
             "Чтобы верифицировать, что вы человек, выберите правильный Mana Value / Converted Mana Cost этой карты.\n"
         ),
         reply_markup=keyboard_markup,
     )
     message_id = int(message.message_id)
-    user_id = int(username)
     cls.verification_messages[user_id] = message_id
     cls.new_users[user_id] = username
-    print(f"User {username} with ID {user_id} added to new users")
-    print(f"Message {message_id} added to verification messages for user {user_id}")
 
   @classmethod
   async def send_quiz_image_to_chat(
@@ -2660,7 +2624,6 @@ class MagicBot:
       filters=filters.StatusUpdate.NEW_CHAT_MEMBERS,
       callback=cls.handle_new_member,
     ))
-    app.add_handler(CommandHandler("testbtn", cls.test_button))
     # League
     app.add_handler(CommandHandler(
         "leaguestatus", cls.league_status_change_handler)

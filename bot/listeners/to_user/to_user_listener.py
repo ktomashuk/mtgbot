@@ -110,6 +110,7 @@ class ToUserListener:
                 answers=options.get("answers"),
                 username=options.get("username"),
                 correct=options.get("correct"),
+                user_id=options.get("user_id"),
             )
           case "approve":
             await MagicBot.approve_user(
