@@ -21,3 +21,9 @@ MYTHICCARD_CARD_URL = (
 MYTHICCARD_ALL_CARDS_URL = (
   "https://mythiccard.com/index.php?route=product/category&path=66&limit=100&fq=1&page={page}"
 )
+MTGTOP8_PAUPER_FORMAT_URL = (
+  "https://mtgtop8.com/format?f=PAU"
+)
+MTGTOP8_MODERN_FORMAT_URL = (
+  "https://mtgtop8.com/format?f=MO"
+)
