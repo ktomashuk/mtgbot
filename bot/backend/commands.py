@@ -111,6 +111,66 @@ class TelegramCommands:
     )
 
   @classmethod
+  async def approve_user(
+      cls,
+      chat_id: str,
+      message_text: str,
+      message_thread_id: str | None = None,
+  ) -> bytes:
+    """Approves a user in chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with card image URL
+      message_thread_id: ID of the thread in the group
+    Returns:
+      A dict with message encoded into bytes
+    """
+    message_dict = json.loads(message_text)
+    username = message_dict.get("username", "")
+    user_id = message_dict.get("user_id", "")
+    return Utils.generate_outgoing_message(
+        command="approve",
+        chat_id=chat_id,
+        message_thread_id=message_thread_id,
+        message_text=username,
+        options={
+            "user_id": user_id,
+            "username": username,
+        }
+    )
+
+  @classmethod
+  async def disapprove_user(
+      cls,
+      chat_id: str,
+      message_text: str,
+      message_thread_id: str | None = None,
+  ) -> bytes:
+    """Disapproves a user in chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with card image URL
+      message_thread_id: ID of the thread in the group
+    Returns:
+      A dict with message encoded into bytes
+    """
+    message_dict = json.loads(message_text)
+    username = message_dict.get("username", "")
+    user_id = message_dict.get("user_id", "")
+    return Utils.generate_outgoing_message(
+        command="disapprove",
+        chat_id=chat_id,
+        message_thread_id=message_thread_id,
+        message_text=username,
+        options={
+            "user_id": user_id,
+            "username": username,
+        }
+    )
+
+  @classmethod
   async def show_card_image(
       cls,
       chat_id: str,
@@ -2361,6 +2421,20 @@ class TelegramCommands:
       # Verification message 
       case "verification":
         return await cls.show_verification(
+            chat_id=chat_id,
+            message_text=message_text,
+            message_thread_id=message_thread_id,
+        )
+      # Approval in chat 
+      case "approve":
+        return await cls.approve_user(
+            chat_id=chat_id,
+            message_text=message_text,
+            message_thread_id=message_thread_id,
+        )
+      # Disapproval in chat 
+      case "disapprove":
+        return await cls.disapprove_user(
             chat_id=chat_id,
             message_text=message_text,
             message_thread_id=message_thread_id,

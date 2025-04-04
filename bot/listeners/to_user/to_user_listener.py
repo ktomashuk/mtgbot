@@ -111,6 +111,20 @@ class ToUserListener:
                 username=options.get("username"),
                 correct=options.get("correct"),
             )
+          case "approve":
+            await MagicBot.approve_user(
+                chat_id=chat_id,
+                message_thread_id=message_thread_id,
+                user_id=options.get("user_id"),
+                username=options.get("username"),
+            )
+          case "disapprove":
+            await MagicBot.disapprove_user(
+                chat_id=chat_id,
+                message_thread_id=message_thread_id,
+                user_id=options.get("user_id"),
+                username=options.get("username"),
+            )
           case "menu":
             await MagicBot.send_menu_to_user(
                 chat_id=chat_id,

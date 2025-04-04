@@ -3,6 +3,8 @@
 import asyncio
 import json
 import time
+import secrets
+import string
 from datetime import datetime
 from aio_pika import (connect_robust, ExchangeType, Message)
 from telegram import (
@@ -12,6 +14,7 @@ from telegram import (
     ReplyKeyboardRemove,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    ChatPermissions
 )
 from telegram.ext import (
     ApplicationBuilder,
@@ -46,6 +49,32 @@ class MagicBot:
   league_for_match_choice = 0
   # Antispam measures
   new_users = {}
+  verification_messages = {}
+
+  @classmethod
+  async def schedule_user_disapproval(
+      cls,
+      chat_id: str,
+      user_id: str,
+      username: str,
+      time: int = 60,
+  ) -> None:
+    """Schedules user disapproval after 60 seconds.
+
+    Args:
+      chat_id: ID of the chat to mute the user in
+      user_id: ID of the user
+      username: username of the user
+      time: time to wait before disapproving the user
+    """
+    await asyncio.sleep(time)
+    message_object = {"user_id": user_id, "username": username}
+    message_string = json.dumps(message_object)
+    await cls.send_message_to_queue(
+        command="disapprove",
+        chat_id=chat_id,
+        message_text=message_string,
+    )
 
   @classmethod
   async def test_button(
@@ -53,7 +82,7 @@ class MagicBot:
       update: Update,
       context: ContextTypes.DEFAULT_TYPE,
   ) -> None:
-    """Handler that responds with a list of ru-mtg deckboxes.
+    """Handles user pressing buttons in inline keyboards.
 
     Args:
       update: telegram-bot parameter
@@ -64,18 +93,21 @@ class MagicBot:
     user_id = user.id
     cls.new_users[user_id] = username
     chat_id = update.effective_chat.id
-    print(cls.new_users)
     await cls.send_message_to_queue(
         command="verification",
         chat_id=chat_id,
-        message_text=username,
+        message_text=user_id,
     )
-    asyncio.create_task(cls.ban_user(
+    await cls.mute_user(
         context=context,
         user_id=user_id,
+        chat_id=update.effective_chat.id,
+    )
+    await cls.schedule_user_disapproval(
         chat_id=chat_id,
-        wait_timer=10,
-    ))
+        user_id=user_id,
+        username=username,
+    )
 
   @classmethod
   async def handle_new_member(
@@ -89,16 +121,26 @@ class MagicBot:
       update: telegram-bot parameter
       context: telegram-bot parameter
     """
-    for member in update.message.new_chat_members:
-      user_id = member.id
-      username = member.username or member.first_name
-      keyboard = [[InlineKeyboardButton("Verify", callback_data=f'verify_{user_id}')]]
-      reply_markup = InlineKeyboardMarkup(keyboard)
-      
-      await update.message.reply_text(
-          f"Welcome {username}! Please verify yourself within 5 minutes by clicking the button below.",
-          reply_markup=reply_markup
-      )
+    user = update.message.from_user
+    username = user.username
+    user_id = user.id
+    cls.new_users[user_id] = username
+    chat_id = update.effective_chat.id
+    await cls.send_message_to_queue(
+        command="verification",
+        chat_id=chat_id,
+        message_text=user_id,
+    )
+    await cls.mute_user(
+        context=context,
+        user_id=user_id,
+        chat_id=update.effective_chat.id,
+    )
+    await cls.schedule_user_disapproval(
+        chat_id=chat_id,
+        user_id=user_id,
+        username=username,
+    )
 
   @classmethod
   async def verify(
@@ -106,39 +148,157 @@ class MagicBot:
       update: Update, 
       context: ContextTypes.DEFAULT_TYPE,
   ):
+    """Handles user pressing buttons in inline keyboards.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    """
     query = update.callback_query
     await query.answer()
     user = query.from_user
-    username = user.username
+    user_id = user.id
+    print(f"User {user.username} pressed a button")
     if query.data.startswith("answer_"):
-      print(query.data)
-    # username_from_query = query.data.split('_')[1]
-    print(f"query triggered by {username}")
-    # await update.message.reply_text(
-    #   f"{username_from_query} YOU HAVE PRESSED A BUTTON"
-    # )
+      user_id_from_query = int(query.data.split('_')[1])
+      message_object = {"user_id": user_id, "username": user.username}
+      message_string = json.dumps(message_object)
+      if user_id == user_id_from_query:
+        print("Correct user pressed a button")
+        if query.data.endswith("_correct"):
+          await cls.send_message_to_queue(
+              command="approve",
+              chat_id=update.effective_chat.id,
+              message_text=message_string,
+          )
+        else:
+          await cls.send_message_to_queue(
+              command="disapprove",
+              chat_id=update.effective_chat.id,
+              message_text=message_string,
+          )
+      else:
+        print("Someone else pressed a button")
 
   @classmethod
-  async def ban_user(
+  async def approve_user(
+      cls,
+      chat_id: str,
+      user_id: str,
+      username: str,
+      disable_preview: bool = True,
+      message_thread_id: str | None = None,
+  ) -> None:
+    """Approves a user in chat.
+
+    Args:
+      context: telegram-bot parameter
+      chat_id: ID of the chat to mute the user in
+      user_id: ID of the user
+      username: username of the user
+      disable_preview: set true to disable previews of pages
+      message_thread_id: ID of the thread in the group
+    """
+    restrictions = ChatPermissions(can_send_messages=True, can_send_photos=True)
+    try:
+      await cls.bot.restrict_chat_member(chat_id, user_id, permissions=restrictions)
+    except Exception as e:
+      print(f"Failed to unmute user {user_id}: {e}")
+    # Delete the message with verification in any case
+    message_id = cls.verification_messages.get(user_id)
+    try:
+      await cls.bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except Exception as e:
+      print(f"Failed to delete message: {e}")
+    await cls.bot.send_message(
+        chat_id=chat_id,
+        message_thread_id=message_thread_id,
+        text=f"@{username} Вы верифицированы, теперь вы можете писать в чат!",
+        parse_mode="HTML",
+        disable_web_page_preview=disable_preview,
+    )
+
+  @classmethod
+  async def disapprove_user(
+      cls,
+      chat_id: str,
+      user_id: str,
+      username: str,
+      disable_preview: bool = True,
+      message_thread_id: str | None = None,
+  ) -> None:
+    """Disapproves a user in chat.
+
+    Args:
+      context: telegram-bot parameter
+      chat_id: ID of the chat to mute the user in
+      user_id: ID of the user
+      username: username of the user
+      disable_preview: set true to disable previews of pages
+      message_thread_id: ID of the thread in the group
+    """
+    # Check if the user ID is in new_users
+    if user_id not in cls.new_users:
+      print(f"User {user_id} not found in new_users")
+      return
+    # Delete the message with verification in any case
+    message_id = cls.verification_messages.get(user_id)
+    print(f"Deleting message with ID {message_id}")
+    try:
+      await cls.bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except Exception as e:
+      print(f"Failed to delete message: {e}")
+    await cls.bot.send_message(
+        chat_id=chat_id,
+        message_thread_id=message_thread_id,
+        text=(
+          f"@{username} Вы не ответили на вопрос!\n"
+          "Если вы человек, но не знаете ответ на вопрос, напишите в личку @NikitaAnahoretTriakin"),
+        parse_mode="HTML",
+        disable_web_page_preview=disable_preview,
+    )
+
+  @classmethod
+  async def mute_user(
       cls,
       context: CallbackContext,
       user_id: int,
       chat_id: int,
-      wait_timer: int
   ) -> None:
-    """Kicks a user from chat.
+    """Mutes a user in chat.
 
     Args:
       context: telegram-bot parameter
       user_id: ID of the user
+      chat_id: ID of the chat to mute the user in
     """
-    print(f"SETTING TIMER FOR {wait_timer} seconds")
-    await asyncio.sleep(wait_timer)
-    until_date = int((asyncio.get_event_loop().time()) + 600)
-    if user_id in cls.new_users:
-      await context.bot.ban_chat_member(chat_id, user_id, until_date=until_date)
-    del cls.new_users[user_id]
+    restrictions = ChatPermissions(can_send_messages=False, can_send_photos=False)
+    try:
+      await context.bot.restrict_chat_member(chat_id, user_id, permissions=restrictions)
+    except Exception as e:
+      print(f"Failed to mute user {user_id}: {e}")
+      return
+    print(f"User {user_id} muted")
 
+  @classmethod
+  async def unmute_user(
+      cls,
+      context: CallbackContext,
+      user_id: int,
+      chat_id: int,
+  ) -> None:
+    """Unmutes a user in chat.
+
+    Args:
+      context: telegram-bot parameter
+      user_id: ID of the user
+      chat_id: ID of the chat to unmute the user in
+    """
+    restrictions = ChatPermissions(can_send_messages=True, can_send_photos=True)
+    try:
+      await context.bot.restrict_chat_member(chat_id, user_id, permissions=restrictions)
+    except Exception as e:
+      print(f"Failed to unmute user {user_id}: {e}")
 
   @classmethod
   async def league_standings_choice_inline_menu(
@@ -1382,26 +1542,37 @@ class MagicBot:
     Args:
       chat_id: id of the chat with the user
       image_url: url of the image that will be sent to the user
-      options: text to display on buttons on inline keyboard
+      answers: a list of answers
+      correct: the correct answer
+      username: user's identification
       message_thread_id: ID of the thread in the group
     """
+    print(f"Sending verification message to user {username} with ID {chat_id}")
     keyboard = []
     for answer in answers:
+      random_string = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(6))
       keyboard.append(
-        [InlineKeyboardButton(answer, callback_data=f"answer_{username}_{answer}{'_correct' if answer == correct else ''}")]
+        [InlineKeyboardButton(answer, callback_data=f"answer_{username}_{random_string}{'_correct' if answer == correct else ''}")]
       )
     keyboard_markup = InlineKeyboardMarkup(keyboard)
-    await cls.bot.send_photo(
+    for k in keyboard:
+      print(f"Button: {k[0].text}, Callback Data: {k[0].callback_data}")
+    message = await cls.bot.send_photo(
         chat_id=chat_id,
         photo=image_url,
         message_thread_id=message_thread_id,
         caption=(
             "Добро пожаловать в группу Magic the Gathering в Белграде!\n"
             "Чтобы верифицировать, что вы человек, выберите правильный Mana Value / Converted Mana Cost этой карты.\n"
-            "Вам надо ответить за 5 минут, иначе вы будете забанены на 10 минут."
         ),
         reply_markup=keyboard_markup,
     )
+    message_id = int(message.message_id)
+    user_id = int(username)
+    cls.verification_messages[user_id] = message_id
+    cls.new_users[user_id] = username
+    print(f"User {username} with ID {user_id} added to new users")
+    print(f"Message {message_id} added to verification messages for user {user_id}")
 
   @classmethod
   async def send_quiz_image_to_chat(
@@ -2484,8 +2655,7 @@ class MagicBot:
     app.add_handler(CommandHandler("confluxhelp", cls.conflux_help_handler))
     # Poll
     app.add_handler(PollAnswerHandler(cls.handle_poll_answer))
-    # Antispam
-    # Antispam
+    # Handle new members for antispam
     app.add_handler(MessageHandler(
       filters=filters.StatusUpdate.NEW_CHAT_MEMBERS,
       callback=cls.handle_new_member,
