@@ -261,7 +261,14 @@ class MagicBot:
       user_id: ID of the user
       chat_id: ID of the chat to unmute the user in
     """
-    restrictions = ChatPermissions(can_send_messages=True, can_send_photos=True)
+    restrictions = ChatPermissions(
+        can_send_messages=True,
+        can_send_photos=True,
+        can_send_other_messages=True,
+        can_add_web_page_previews=True,
+        can_send_audios=True,
+        can_send_videos=True,
+    )
     try:
       await context.bot.restrict_chat_member(chat_id, user_id, permissions=restrictions)
     except Exception as e:
