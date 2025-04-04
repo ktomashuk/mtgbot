@@ -94,6 +94,7 @@ class TelegramCommands:
     card_cmc = int(card_data.get("cmc"))
     other_numbers = random.sample([n for n in range(1, 11) if n != card_cmc], 3)
     answers = [card_cmc] + other_numbers
+    random.shuffle(answers)
     faces = card_data.get("card_faces", None)
     image_uri = card_data.get("image_uris", None)
     if faces:
