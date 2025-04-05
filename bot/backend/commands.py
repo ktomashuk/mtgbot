@@ -1,6 +1,7 @@
 """Module for resolving commands sent by from-user-listener.
 """
 import json
+import random
 from bot.deckbox.deckbox import Deckbox
 from bot.scryfall.scryfall import ScryfallFetcher
 from bot.mongo.mongo_client import MongoClient
@@ -69,6 +70,109 @@ class TelegramCommands:
           message_text=card_uri,
           options={"disable_preview": False},
       )
+
+  @classmethod
+  async def show_verification(
+      cls,
+      chat_id: str,
+      message_text: str,
+      message_thread_id: str | None = None,
+  ) -> bytes:
+    """Sends a captcha verification to the chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with card image URL
+      message_thread_id: ID of the thread in the group
+    Returns:
+      A dict with message encoded into bytes
+    """
+    message_dict = json.loads(message_text)
+    username = message_dict.get("username", "")
+    user_id = message_dict.get("user_id", "")
+    card_data = await ScryfallFetcher.get_random_card(non_zero_cmc=True)
+    card_cmc = int(card_data.get("cmc"))
+    other_numbers = random.sample([n for n in range(1, 11) if n != card_cmc], 3)
+    answers = [card_cmc] + other_numbers
+    random.shuffle(answers)
+    faces = card_data.get("card_faces", None)
+    image_uri = card_data.get("image_uris", None)
+    if faces:
+      image = faces[0]["image_uris"]["normal"]
+    if image_uri:
+      image = image_uri["normal"]
+    return Utils.generate_outgoing_message(
+        command="verification",
+        chat_id=chat_id,
+        message_thread_id=message_thread_id,
+        message_text=image,
+        options={
+            "answers": answers,
+            "username": username,
+            "correct": card_cmc,
+            "user_id": user_id,
+        }
+    )
+
+  @classmethod
+  async def approve_user(
+      cls,
+      chat_id: str,
+      message_text: str,
+      message_thread_id: str | None = None,
+  ) -> bytes:
+    """Approves a user in chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with card image URL
+      message_thread_id: ID of the thread in the group
+    Returns:
+      A dict with message encoded into bytes
+    """
+    message_dict = json.loads(message_text)
+    username = message_dict.get("username", "")
+    user_id = message_dict.get("user_id", "")
+    return Utils.generate_outgoing_message(
+        command="approve",
+        chat_id=chat_id,
+        message_thread_id=message_thread_id,
+        message_text=username,
+        options={
+            "user_id": user_id,
+            "username": username,
+        }
+    )
+
+  @classmethod
+  async def disapprove_user(
+      cls,
+      chat_id: str,
+      message_text: str,
+      message_thread_id: str | None = None,
+  ) -> bytes:
+    """Disapproves a user in chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with card image URL
+      message_thread_id: ID of the thread in the group
+    Returns:
+      A dict with message encoded into bytes
+    """
+    message_dict = json.loads(message_text)
+    username = message_dict.get("username", "")
+    user_id = message_dict.get("user_id", "")
+    return Utils.generate_outgoing_message(
+        command="disapprove",
+        chat_id=chat_id,
+        message_thread_id=message_thread_id,
+        message_text=username,
+        options={
+            "user_id": user_id,
+            "username": username,
+        }
+    )
 
   @classmethod
   async def show_card_image(
@@ -2318,6 +2422,27 @@ class TelegramCommands:
         return await cls.show_conflux_help(chat_id=chat_id)
       case "leaguehelp":
         return await cls.show_league_help(chat_id=chat_id)
+      # Verification message 
+      case "verification":
+        return await cls.show_verification(
+            chat_id=chat_id,
+            message_text=message_text,
+            message_thread_id=message_thread_id,
+        )
+      # Approval in chat 
+      case "approve":
+        return await cls.approve_user(
+            chat_id=chat_id,
+            message_text=message_text,
+            message_thread_id=message_thread_id,
+        )
+      # Disapproval in chat 
+      case "disapprove":
+        return await cls.disapprove_user(
+            chat_id=chat_id,
+            message_text=message_text,
+            message_thread_id=message_thread_id,
+        )
       # Scryfall card URL fetcher
       case "c":
         return await cls.show_full_card_url(
