@@ -4,6 +4,8 @@ import json
 from bot.deckbox.deckbox import Deckbox
 from bot.scryfall.scryfall import ScryfallFetcher
 from bot.mongo.mongo_client import MongoClient
+from bot.mtgtop8.mtgtop8 import MtgTop8
+from bot.mtgtop8.mtgtop8 import Formats
 from bot.utils.utils import Utils
 from bot.deckbox.deckbox import Deckbox
 from bot.backend.backend import Backend
@@ -134,6 +136,39 @@ class TelegramCommands:
           chat_id=chat_id,
           message_text="Error generating a quiz. Please try again.",
       )
+
+  @classmethod
+  async def send_random_hand(
+      cls,
+      chat_id: str,
+      message_text: str,
+      message_thread_id: str | None = None,
+  ) -> bytes:
+    """Sends a text with random hand to chat.
+
+    Args:
+      chat_id: Id of the telegram chat to send message to
+      message_text: text with card name
+      message_thread_id: ID of the thread in the group
+    Returns:
+      A dict with message encoded into bytes
+    """
+    format_name = message_text
+    match format_name:
+      case "pauper":
+        format_name = Formats.PAUPER
+      case "modern":
+        format_name = Formats.MODERN
+      case _:
+        pass
+    image_url, deck_name = await MtgTop8.generate_random_hand(format=format_name)
+    return Utils.generate_outgoing_message(
+        command="hand",
+        chat_id=chat_id,
+        message_thread_id=message_thread_id,
+        message_text=image_url,
+        options={"deck_name": deck_name},
+    )
 
   @classmethod
   async def show_card_price(
@@ -2439,6 +2474,13 @@ class TelegramCommands:
       # Creating/forwarding a EDH danas poll
       case "edhdanas":
         return await cls.edh_danas_send_poll(
+            chat_id=chat_id,
+            message_text=message_text,
+            message_thread_id=message_thread_id,
+        )
+      # Sending a random hand message
+      case "hand":
+        return await cls.send_random_hand(
             chat_id=chat_id,
             message_text=message_text,
             message_thread_id=message_thread_id,

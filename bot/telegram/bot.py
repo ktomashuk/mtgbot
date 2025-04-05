@@ -708,6 +708,37 @@ class MagicBot:
     return result
 
   @classmethod
+  async def send_random_hand_to_channel(
+      cls,
+      chat_id: str,
+      deck_name: str,
+      image_url: str,
+      message_thread_id: str | None = None,
+  ) -> bool:
+    """Sends a poll to the channel.
+
+    Args:
+      chat_id: id of the chat with the user
+      message: message in the poll
+      answers: a list of answers
+      message_thread_id: ID of the thread in the group
+    Returns:
+      A bool showing if poll result was added to mongo
+    """
+    await cls.bot.send_photo(
+        chat_id=chat_id,
+        message_thread_id=message_thread_id,
+        photo=image_url,
+    )
+    await cls.bot.send_poll(
+        chat_id=chat_id,
+        message_thread_id=message_thread_id,
+        question=f"Deck: {deck_name}",
+        options=["Keep", "Mull"],
+        is_anonymous=False,
+    )
+
+  @classmethod
   async def start_bulk_subsribe(
       cls,
       update: Update,
@@ -1635,6 +1666,31 @@ class MagicBot:
     )
 
   @classmethod
+  async def random_hand_handler(
+      cls,
+      update: Update,
+      context: ContextTypes.DEFAULT_TYPE
+  ) -> None:
+    """Handler that responds to any message with /ci command and sends a 
+    corresponding message to the "from-user" queue.
+
+    Args:
+      update: telegram-bot parameter
+      context: telegram-bot parameter
+    """
+    message_text = update.message.text
+    split_message = message_text.split("/hand ")
+    if len(split_message) < 2:
+      return
+    format_name = split_message[1]
+    await cls.send_message_to_queue(
+        command="hand",
+        chat_id=update.effective_chat.id,
+        message_thread_id=update.message.message_thread_id,
+        message_text=format_name,
+    )
+
+  @classmethod
   async def card_url_hanlder(
       cls,
       update: Update,
@@ -2327,6 +2383,7 @@ class MagicBot:
     app.add_handler(CommandHandler("cp", cls.card_price_handler))
     app.add_handler(CommandHandler("ci", cls.card_image_handler))
     app.add_handler(CommandHandler("quiz", cls.card_quiz_handler))
+    app.add_handler(CommandHandler("hand", cls.random_hand_handler))
     app.add_handler(CommandHandler("reg", cls.user_registration_handler))
     app.add_handler(CommandHandler("mydeckbox", cls.deckbox_check_handler))
     app.add_handler(CommandHandler("updatedeckbox", cls.deckbox_update_handler))

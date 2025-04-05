@@ -158,6 +158,13 @@ class ToUserListener:
                 card_name=card_name,
                 image_url=art,
             )
+          case "hand":
+            await MagicBot.send_random_hand_to_channel(
+                chat_id=chat_id,
+                deck_name=options.get("deck_name", ""),
+                image_url=message,
+                message_thread_id=message_thread_id,
+            )
           case "void":
             pass
 
