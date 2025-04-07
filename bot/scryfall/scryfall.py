@@ -20,13 +20,21 @@ class ScryfallFetcher:
     return response_json
 
   @classmethod
-  async def get_random_card(cls) -> dict | None:
+  async def get_random_card(
+      cls,
+      non_zero_cmc: bool = False,
+  ) -> dict | None:
     """Fetches random card info from scryfall API.
+
+    Args:
+      non_zero_cmc: set to True to fetch only cards with CMC >= 1
 
     Returns:
       A dict with card json data
     """
     url = SCRYFALL_GET_RANDOM_CARD_URL
+    if non_zero_cmc:
+      url += "?q=cmc%3E%3D1"
     response = await HttpClient.HTTP_SESSION.get(url=url)
     if response.status == 200:
       response_json = await response.json()
@@ -37,15 +45,27 @@ class ScryfallFetcher:
       return None
 
   @classmethod
-  async def get_card_image(cls, card_name: str) -> list[str] | str | None:
+  async def get_card_image(
+      cls,
+      card_name: str,
+      random_card: bool = False,
+      non_zero_cmc: bool = False,
+  ) -> list[str] | str | None:
     """Gets card images for a card with the chosen name.
 
     Args:
       card_name: name of the card
+      random_card: set to True to fetch a random card
+      non_zero_cmc: set to True to fetch only cards with CMC >= 1
+
     Returns:
       A list of strings with the image urls (empty if card doesn't exist)
     """
-    response = await cls.get_card(card_name=card_name)
+    if random_card:
+      response = await cls.get_random_card(non_zero_cmc=non_zero_cmc)
+    else:
+      response = await cls.get_card(card_name=card_name)
+
     results = []
     if not response:
       return results
@@ -67,13 +87,18 @@ class ScryfallFetcher:
     return results
 
   @classmethod
-  async def get_card_image_art(cls) -> dict | None:
+  async def get_card_image_art(
+      cls,
+      non_zero_cmc: bool = False,
+  ) -> dict | None:
     """Fetches cropped art of a random card from scryfall.
 
+    Args:
+      non_zero_cmc: set to True to fetch only cards with CMC >= 1
     Returns:
       A dict with card name and art
     """
-    response = await cls.get_random_card()
+    response = await cls.get_random_card(non_zero_cmc=non_zero_cmc)
     image_url = None
     if response:
       image_url = response.get("image_uris", {})
