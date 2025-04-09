@@ -2633,10 +2633,10 @@ class MagicBot:
     # Poll
     app.add_handler(PollAnswerHandler(cls.handle_poll_answer))
     # Handle new members for antispam
-    app.add_handler(MessageHandler(
-      filters=filters.StatusUpdate.NEW_CHAT_MEMBERS,
-      callback=cls.handle_new_member,
-    ))
+    # app.add_handler(MessageHandler(
+    #   filters=filters.StatusUpdate.NEW_CHAT_MEMBERS,
+    #   callback=cls.handle_new_member,
+    # ))
     # League
     app.add_handler(CommandHandler(
         "leaguestatus", cls.league_status_change_handler)
